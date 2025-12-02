@@ -1,0 +1,94 @@
+using System.Collections.Generic;
+using UnityEngine;
+public class SkyboxData
+{
+    public Color skyColor;
+    public Color fogColor;
+    public Color cloudColor;
+    public float cloudAmount;
+
+}
+public class BiomeSkyboxController : MonoBehaviour
+{
+    public Material skyboxMaterial;
+    public bool debugMode = false;
+    private List<SkyboxData> skyBoxDatas = new List<SkyboxData>();
+    void Start()
+    {
+        if (skyboxMaterial == null)
+        {
+            skyboxMaterial = RenderSettings.skybox;
+        }
+
+        RenderSettings.skybox = skyboxMaterial;
+        DynamicGI.UpdateEnvironment();
+
+        skyBoxDatas = new List<SkyboxData>
+        {
+        new SkyboxData { skyColor = new Color(0.2f, 0.4f, 0.6f), fogColor = new Color(0.3f, 0.5f, 0.7f), cloudColor = new Color(0.8f, 0.8f, 0.8f), cloudAmount = 0.737f }, // WaterRocks
+        new SkyboxData { skyColor = new Color(0.1f, 0.3f, 0.5f), fogColor = new Color(0.2f, 0.4f, 0.6f), cloudColor = new Color(0.7f, 0.7f, 0.7f), cloudAmount = 0.737f }, // Ocean
+        new SkyboxData { skyColor = new Color(0.94f, 0.39f, 0.31f), fogColor = new Color(0.84f, 0.6f, 0.22f), cloudColor = new Color(1f, 1f, 1f), cloudAmount = 0.737f }, // Plains
+        new SkyboxData { skyColor = new Color(0.4f, 0.6f, 0.8f), fogColor = new Color(0.5f, 0.7f, 0.9f), cloudColor = new Color(0.9f, 0.9f, 0.9f), cloudAmount = 0.737f }, // Taiga
+        new SkyboxData { skyColor = new Color(0.31f, 0.5f, 0.79f), fogColor = new Color(0.48f, 0.57f, 0.67f), cloudColor = new Color(0.85f, 0.85f, 0.85f), cloudAmount = 0.737f }, // Mountain
+        new SkyboxData { skyColor = new Color(1f, 0.4f, 0.2f), fogColor = new Color(1f, 0.5f, 0.3f), cloudColor = new Color(1f, 0.7f, 0.5f), cloudAmount = .737f }, // LavaCast
+        new SkyboxData { skyColor = new Color(0.2f, 0.4f, 0.56f), fogColor = new Color(0.16f, 0.2f, 0.23f), cloudColor = new Color(1f, 1f, 1f), cloudAmount = 0.737f }, // Tundra
+        new SkyboxData { skyColor = new Color(1f, 0.9f, 0.6f), fogColor = new Color(1f, 0.95f, 0.7f), cloudColor = new Color(1f, 1f, 0.9f), cloudAmount = 0.737f }  // Desert
+        };
+
+
+        SetBiome(new Color(0.5f, 0.7f, 1f), new Color(0.6f, 0.8f, 1f), new Color(1f, 1f, 1f), 0.5f);
+    }
+    public void Update()
+    {
+        // Optional: Add any dynamic updates to the skybox if needed
+        Transform playerTransform = PlayerMovement.instance;
+        if (playerTransform == null) return;
+        (BiomeData biomeData, float biomeDeciderVal, int biomeDeciderIndex) = WorldGeneration2.GetBiomeType(playerTransform.position.x, playerTransform.position.z);
+        BiomeType biomeType = biomeData.biomeType;
+        if (!debugMode)
+            BiomeToSkyBox(biomeType);
+    }
+    public void SetBiome(Color sky, Color fog, Color cloud, float cloudAmount)
+    {
+        skyboxMaterial.SetColor("_SkyColor", sky);
+        skyboxMaterial.SetColor("_FogColor", fog);
+        skyboxMaterial.SetColor("_CloudColor", cloud);
+        skyboxMaterial.SetFloat("_CloudAmount", cloudAmount);
+    }
+
+    public void BiomeToSkyBox(BiomeType biome)
+    {
+        SkyboxData currentSkyboxData;
+        switch (biome)
+        {
+            case BiomeType.WaterRocks:
+                currentSkyboxData = skyBoxDatas[0];
+                break;
+            case BiomeType.Ocean:
+                currentSkyboxData = skyBoxDatas[1];
+                break;
+            case BiomeType.Plains:
+                currentSkyboxData = skyBoxDatas[2];
+                break;
+            case BiomeType.Taiga:
+                currentSkyboxData = skyBoxDatas[3];
+                break;
+            case BiomeType.Mountain:
+                currentSkyboxData = skyBoxDatas[4];
+                break;
+            case BiomeType.LavaCast:
+                currentSkyboxData = skyBoxDatas[5];
+                break;
+            case BiomeType.Tundra:
+                currentSkyboxData = skyBoxDatas[6];
+                break;
+            case BiomeType.Desert:
+                currentSkyboxData = skyBoxDatas[7];
+                break;
+            default:
+                currentSkyboxData = skyBoxDatas[2];;
+                break;
+        }
+        SetBiome(currentSkyboxData.skyColor, currentSkyboxData.fogColor, currentSkyboxData.cloudColor, currentSkyboxData.cloudAmount);
+    }
+}
