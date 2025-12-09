@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class EnemyScript : MonoBehaviour
@@ -8,11 +9,12 @@ public class EnemyScript : MonoBehaviour
     [Header("Stats")]
     [SerializeField] public float height = 1;
     [SerializeField] public int health = 25;
-    [SerializeField] int attackType = 0;
+    [SerializeField] int damage = 10;
+    [SerializeField] float attackDuration = 0.5f;
     [Header("References")]
     //public static Transform playerTransform;
     [SerializeField] Rigidbody rb;
-    [SerializeField] GameObject[] attackPrefabs;
+    [SerializeField] GameObject attackPrefab;
 
     //path finding
     public Vector3 lastPosition;
@@ -199,7 +201,7 @@ public class EnemyScript : MonoBehaviour
         if(lastAttackTime <= 0)
         {
             Debug.Log("Enemy attacked the player!");
-            AttackPlayer(attackType);
+            AttackPlayer();
             lastAttackTime = attackCooldown;
         } else
         {
@@ -207,18 +209,17 @@ public class EnemyScript : MonoBehaviour
         }
     }
 
-    void AttackPlayer(int attackOption)
+    void AttackPlayer()
     {
-        switch(attackOption)
+        //instantiate attack prefab
+        GameObject attackObject = Instantiate(attackPrefab, transform.position + transform.forward * (height/2), transform.rotation);
+        AttackScript attackScript = attackObject.GetComponent<AttackScript>();
+        if(attackScript != null)
         {
-            case 0:
-                Debug.Log("Enemy Bites");
-                GameObject bit = Instantiate(attackPrefabs[0], transform.position + transform.forward * 1f, Quaternion.Euler(transform.rotation.eulerAngles.x ,transform.rotation.eulerAngles.y - 90,transform.rotation.eulerAngles.z));
-                bit.GetComponent<AttackScript>().owner = this.gameObject;
-                break;
-            default:
-                Debug.Log("Enemy Bites");
-                break;
+            attackScript.owner = this.gameObject;
+            attackScript.damage = damage;
+            attackScript.attackDuration = attackDuration;
+            attackObject.transform.position += transform.forward * attackScript.spawnOffset;
         }
     }
 
@@ -244,3 +245,4 @@ public class EnemyScript : MonoBehaviour
         return randomPosition;
     }
 }
+
