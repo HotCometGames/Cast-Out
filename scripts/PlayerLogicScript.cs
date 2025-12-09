@@ -271,7 +271,7 @@ public class PlayerLogicScript : MonoBehaviour
                 // Cast a fire spell
                 Debug.Log("Casting fire spell...");
                 GameObject fireball = Instantiate(fireballPrefab, playerCamera.transform.position + playerCamera.transform.forward, Quaternion.identity);
-                fireball.GetComponent<Rigidbody>().velocity = playerCamera.transform.forward * 50f;
+                fireball.GetComponent<FireBallScript>().speed = 50f;
                 fireball.GetComponent<AttackScript>().owner = this.gameObject;
                 break;
             
