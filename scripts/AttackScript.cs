@@ -9,6 +9,8 @@ public class AttackScript : MonoBehaviour
     public int damage = 0;
     public float attackDuration = 0.5f;
     private float attackTimer = 0f;
+
+    public float spawnOffset = 0f;
     // Start is called before the first frame update
     void Start()
     {
