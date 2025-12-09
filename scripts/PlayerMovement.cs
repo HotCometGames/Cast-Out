@@ -11,6 +11,10 @@ public class PlayerMovement : MonoBehaviour
     public float gravity = -9.81f;
     public bool inputEnabled = true;
 
+    //debug DELETE LATER
+    public float debugSpeedMultiplier = 20f;
+    public float debugAppliedMultiplier = 1f;
+
     public Transform cameraTransform;
 
     private Rigidbody rb;
@@ -34,6 +38,7 @@ public class PlayerMovement : MonoBehaviour
     {
         // Mouse look
         if (!inputEnabled) return;
+        CHECKFORDEBUG();
         float mouseX = Input.GetAxis("Mouse X") * lookSpeed;
         float mouseY = Input.GetAxis("Mouse Y") * lookSpeed;
 
@@ -47,7 +52,7 @@ public class PlayerMovement : MonoBehaviour
         float moveX = Input.GetAxis("Horizontal");
         float moveZ = Input.GetAxis("Vertical");
         Vector3 move = transform.right * moveX + transform.forward * moveZ;
-        move *= moveSpeed;
+        move *= moveSpeed * debugAppliedMultiplier;
 
         Vector3 velocity = rb.velocity;
         velocity.x = move.x;
@@ -92,5 +97,14 @@ public class PlayerMovement : MonoBehaviour
     void OnCollisionExit(Collision collision)
     {
         isGrounded = false;
+    }
+
+    void CHECKFORDEBUG()
+    {
+        if(Input.GetKeyDown(KeyCode.T))
+        {
+            debugAppliedMultiplier = debugAppliedMultiplier == 1f ? debugSpeedMultiplier : 1f;
+            Debug.Log("Debug Speed Multiplier: " + debugAppliedMultiplier);
+        }
     }
 }
