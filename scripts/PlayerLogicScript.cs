@@ -351,7 +351,7 @@ public class PlayerLogicScript : MonoBehaviour
                 UpdateHotbar();
                 break;
             default:
-                GameObject punch = Instantiate(punchPrefab, player.position + player.forward * 1f, Quaternion.Euler(transform.rotation.eulerAngles.x ,transform.rotation.eulerAngles.y - 90,transform.rotation.eulerAngles.z));
+                GameObject punch = Instantiate(punchPrefab, player.position + player.forward * 1f, transform.rotation);
                 punch.GetComponent<AttackScript>().owner = this.gameObject;
                 Debug.Log("Punching...");
                 break;
