@@ -7,3 +7,6 @@ This repo was created to showcase the current state of this project, which is ab
 Decemeber 8, 2025
 Most of the updates today can be seen in the unity editor, and not in code, however, there were slight code changes, like making certain attacks spawn on the ground, changing how the fireball works, and adding debugging movement to the player movement. Most of the work today was done making new attacks for the enemies in the editor, I made an earthquake attack, a ice shard attack, and reused the fireball for the fireling. Today I also uploaded my first devlog, the reaction seems to be positive, at around 160 views at 10pm tonight. Hopefully future devlogs will see growth!
 https://www.youtube.com/watch?v=PpcO3uLk8Gc
+
+Decemeber 17, 2025
+Added enemy drops
