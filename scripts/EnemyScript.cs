@@ -11,6 +11,9 @@ public class EnemyScript : MonoBehaviour
     [SerializeField] public int health = 25;
     [SerializeField] int damage = 10;
     [SerializeField] float attackDuration = 0.5f;
+    [Header("Drop Data")]
+    [SerializeField] ItemData[] drops;
+    [SerializeField] float[] dropChances; //should be same length as drops array
     [Header("References")]
     //public static Transform playerTransform;
     [SerializeField] Rigidbody rb;
@@ -107,6 +110,7 @@ public class EnemyScript : MonoBehaviour
     }
     void Die()  
     {
+        DropItems();
         Destroy(gameObject);
     }
 
@@ -244,5 +248,18 @@ public class EnemyScript : MonoBehaviour
         Vector3 randomPosition = new Vector3(lastPosition.x + randomCircle.x, WorldGeneration2.GetHeight(lastPosition.x + randomCircle.x, lastPosition.z + randomCircle.y), lastPosition.z + randomCircle.y);
         return randomPosition;
     }
-}
 
+    void DropItems()
+    {
+        for(int i = 0; i < drops.Length; i++)
+        {
+            float chance = dropChances[i];
+            float roll = UnityEngine.Random.Range(0f, 1f);
+            if(roll <= chance)
+            {
+                //drop the item
+                GameObject itemObject = Instantiate(drops[i].prefab, transform.position, Quaternion.identity);
+            }
+        }
+    }
+}
