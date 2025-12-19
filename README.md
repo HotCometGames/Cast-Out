@@ -10,3 +10,6 @@ https://www.youtube.com/watch?v=PpcO3uLk8Gc
 
 Decemeber 17, 2025
 Added enemy drops
+
+Decemeber 18, 2025
+Added a way to craft, when an object is in the crafting space, it gets added to the list of current aviable objects, and it checks if it matches a recipe, if it does, it provides the outcome. I also made all items trigger colliders, as well as giving them a procedual animation made using code.
