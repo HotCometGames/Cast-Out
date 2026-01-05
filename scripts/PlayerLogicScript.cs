@@ -54,6 +54,9 @@ public class PlayerLogicScript : MonoBehaviour
     public GameObject plantPrefab;
     public GameObject fireballPrefab;
 
+    //Crafting
+    public bool inCraftingRune = false;
+
     string currentLookAt;
     string currentLookAtTag;
     string currentMenu = "";
@@ -474,25 +477,25 @@ public class PlayerLogicScript : MonoBehaviour
             switch (hit.collider.tag)
             {
                 case "Crystal":
-                    captions.text = "Left Click with a Rock Item to Mine it";
+                    AttemptToSetText("Left Click with a Rock Item to Mine it");
                     currentLookAt = hit.collider.gameObject.GetComponent<ItemPickup>().itemData.name;
                     currentLookAtTag = "Crystal";
                     currentLookAtObject = hit.collider.gameObject;
                     break;
                 case "Well":
-                    captions.text = "Left Click with a Stick Item to Enchant it";
+                    AttemptToSetText("Left Click with a Stick Item to Enchant it");
                     currentLookAt = hit.collider.gameObject.name;
                     currentLookAtTag = "Well";
                     currentLookAtObject = hit.collider.gameObject;
                     break;
                 case "Item":
-                    captions.text = "Right Click to pick up " + hit.collider.gameObject.GetComponent<ItemPickup>().itemData.name;
+                    AttemptToSetText("Right Click to pick up " + hit.collider.gameObject.GetComponent<ItemPickup>().itemData.name);
                     currentLookAt = hit.collider.gameObject.GetComponent<ItemPickup>().itemData.name;
                     currentLookAtTag = "Item";
                     currentLookAtObject = hit.collider.gameObject;
                     break;
                 case "Orc":
-                    captions.text = "An Orc. Right Click to Trade.";
+                    AttemptToSetText("An Orc. Right Click to Trade.");
                     currentLookAt = "Orc";
                     currentLookAtTag = "Orc";
                     currentLookAtObject = hit.collider.gameObject;
@@ -508,10 +511,20 @@ public class PlayerLogicScript : MonoBehaviour
         }
         else
         {
-            captions.text = "";
+            AttemptToSetText("");
             currentLookAt = "";
             currentLookAtTag = "";
             currentLookAtObject = null;
+        }
+    }
+    void AttemptToSetText(string text)
+    {
+        if(inCraftingRune)
+        {
+            captions.text = "Left Click to Craft Item";
+        } else
+        {
+            captions.text = text;
         }
     }
 
@@ -528,6 +541,10 @@ public class PlayerLogicScript : MonoBehaviour
         String tag = other.tag;
         switch (tag)
         {
+            case "Crafting":
+                inCraftingRune = true;
+                AttemptToSetText("Left Click to Craft Item");
+                break;
             case "Lava":
                 Debug.Log("Taking lava damage");
                 takeDamage(10);
@@ -543,6 +560,19 @@ public class PlayerLogicScript : MonoBehaviour
                     Debug.Log("Taking attack damage");
                     takeDamage(attackScript.damage);
                 }
+                break;
+            default:
+                break;
+        }  
+    }
+    private void OnTriggerExit(Collider other)
+    {
+        String tag = other.tag;
+        switch (tag)
+        {
+            case "Crafting":
+                inCraftingRune = false;
+                AttemptToSetText("");
                 break;
             default:
                 break;
