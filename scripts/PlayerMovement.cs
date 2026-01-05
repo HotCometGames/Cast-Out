@@ -37,32 +37,39 @@ public class PlayerMovement : MonoBehaviour
     void Update()
     {
         // Mouse look
-        if (!inputEnabled) return;
-        CHECKFORDEBUG();
-        float mouseX = Input.GetAxis("Mouse X") * lookSpeed;
-        float mouseY = Input.GetAxis("Mouse Y") * lookSpeed;
-
-        xRotation -= mouseY;
-        xRotation = Mathf.Clamp(xRotation, -90f, 90f);
-
-        cameraTransform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
-        transform.Rotate(Vector3.up * mouseX);
-
-        // Movement
-        float moveX = Input.GetAxis("Horizontal");
-        float moveZ = Input.GetAxis("Vertical");
-        Vector3 move = transform.right * moveX + transform.forward * moveZ;
-        move *= moveSpeed * debugAppliedMultiplier;
-
-        Vector3 velocity = rb.velocity;
-        velocity.x = move.x;
-        velocity.z = move.z;
-        rb.velocity = new Vector3(velocity.x, rb.velocity.y, velocity.z);
-
-        // Jumping
-        if (isGrounded && Input.GetButtonDown("Jump"))
+        if (inputEnabled)
         {
-            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+            CHECKFORDEBUG();
+            float mouseX = Input.GetAxis("Mouse X") * lookSpeed;
+            float mouseY = Input.GetAxis("Mouse Y") * lookSpeed;
+
+            xRotation -= mouseY;
+            xRotation = Mathf.Clamp(xRotation, -90f, 90f);
+
+            cameraTransform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
+            transform.Rotate(Vector3.up * mouseX);
+
+            // Movement
+            float moveX = Input.GetAxis("Horizontal");
+            float moveZ = Input.GetAxis("Vertical");
+            Vector3 move = transform.right * moveX + transform.forward * moveZ;
+            move *= moveSpeed * debugAppliedMultiplier;
+
+            Vector3 velocity = rb.velocity;
+            velocity.x = move.x;
+            velocity.z = move.z;
+            rb.velocity = new Vector3(velocity.x, rb.velocity.y, velocity.z);
+            float currentSpeed = new Vector3(rb.velocity.x, 0, rb.velocity.z).magnitude;
+            ItemHoldingUIScript.SetSpeed(currentSpeed / (moveSpeed * debugAppliedMultiplier));
+
+            // Jumping
+            if (isGrounded && Input.GetButtonDown("Jump"))
+            {
+                rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+            }
+        } else
+        {
+            ItemHoldingUIScript.SetSpeed(0f);
         }
     }
 
