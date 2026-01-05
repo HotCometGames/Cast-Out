@@ -230,6 +230,7 @@ public class PlayerLogicScript : MonoBehaviour
                 default:
                     break;
             }
+            ItemHoldingUIScript.PlayUseAnimation();
             return;
         }
         if (inventory[item].manaCost > mana)
@@ -358,6 +359,7 @@ public class PlayerLogicScript : MonoBehaviour
         }
         mana -= inventory[item].manaCost;
         manaBar.value = mana;
+        ItemHoldingUIScript.PlayUseAnimation();
     }
 
     public void UpdateHotbar()
@@ -372,6 +374,10 @@ public class PlayerLogicScript : MonoBehaviour
                 Color c = slotImage.color;
                 c.a = 0f;
                 slotImage.color = c;
+                if(i == selectedItem)
+                {
+                    ItemHoldingUIScript.ClearSprite();
+                }
                 continue;
             }
 
@@ -393,9 +399,14 @@ public class PlayerLogicScript : MonoBehaviour
 
             // Highlight selected item
             if (i == selectedItem)
+            {
                 slots[i].GetComponent<RectTransform>().localScale = Vector3.one * 1.5f;
+                ItemHoldingUIScript.SetSprite(inventory[i].sprite);
+            }
             else
+            {
                 slots[i].GetComponent<RectTransform>().localScale = Vector3.one;
+            }
         }
 
         for (int i = 0; i < inventorySlots.Length; i++)
