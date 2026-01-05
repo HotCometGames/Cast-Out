@@ -9,6 +9,7 @@ public class CraftingRuneScript : MonoBehaviour
     private List<GameObject> itemsInRune = new List<GameObject>();
     [SerializeField]  List<List<ItemData>> craftingRecipes = new List<List<ItemData>>();
     [SerializeField] List<List<ItemData>> craftingResults = new List<List<ItemData>>();
+    private bool playerInRange = false;
 
     // Start is called before the first frame update
     void Start()
@@ -21,22 +22,36 @@ public class CraftingRuneScript : MonoBehaviour
     void Update()
     {
         itemsInRune.RemoveAll(item => item == null);
-        CraftItem();
+        if (playerInRange && Input.GetMouseButtonDown(0))
+            CraftItem();
     }
 
     void OnTriggerEnter(Collider other)
     {
         if (other.gameObject.CompareTag("Item") == false)
+        {
+            if (other.gameObject.CompareTag("Player"))
+            {
+                playerInRange = true;
+            }
             return;
+        }
         itemsInRune.Add(other.gameObject);
     }
 
     void OnTriggerExit(Collider other)
     {
         if (other.gameObject.CompareTag("Item") == false)
+        {
+            if (other.gameObject.CompareTag("Player"))
+            {
+                playerInRange = false;
+        }
             return;
+        }
         itemsInRune.Remove(other.gameObject);
     }
+
 
     void CraftItem()
     {
