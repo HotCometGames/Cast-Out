@@ -137,6 +137,8 @@ public class WorldGeneration2 : MonoBehaviour
         baseNoiseScale = setBaseNoiseScale;
         mediumNoiseScale = setMediumNoiseScale;
         smallNoiseScale = setSmallNoiseScale;
+        biomeTempNoiseScale = setBiomeTempNoiseScale;
+        biomeDeciderNoiseScale = setBiomeDeciderNoiseScale;
         treeNoiseScale = setTreeNoiseScale;
         structureNoiseScale = setStructureNoiseScale;
         mobNoiseScale = setMobNoiseScale;
@@ -283,7 +285,7 @@ public class WorldGeneration2 : MonoBehaviour
         GenerateWater(chunkObj, chunkCoord, biomeIndices);
         GenerateLava(chunkObj, chunkCoord, biomeIndices);
         SpawnStructures(chunkObj, chunkCoord, biomeIndices);
-        SpawnMobs(chunkObj, chunkCoord, biomeIndices);
+        //SpawnMobs(chunkObj, chunkCoord, biomeIndices);
     }
 
     // Generates the mesh for the chunk at the given chunk coordinates
@@ -938,6 +940,38 @@ public class WorldGeneration2 : MonoBehaviour
             }
         }
         return (biomeUsing[biomeDeciderIndex], biomeDeciderVal, biomeDeciderIndex);
+    }
+
+    public static bool PosHasLava(float worldX, float worldZ)
+    {
+        (BiomeData biomeData, float biomeDeciderVal, int biomeDeciderIndex) = GetBiomeType(worldX, worldZ);
+        if (biomeData.biomeType == BiomeType.LavaCast)
+        {
+            float mediumNoise = Mathf.PerlinNoise((worldX * mediumNoiseScale) + mediumOffsetX, (worldZ * mediumNoiseScale) + mediumOffsetZ) * mediumHeight;
+            if (0.6f < mediumNoise / mediumHeight && mediumNoise / mediumHeight < 0.2f)
+                return true;
+        }
+        return false;
+    }
+
+    public static MobData GetMobDataAtPosition(float worldX, float worldZ)
+    {
+        (BiomeData biomeData, float biomeDeciderVal, int biomeDeciderIndex) = GetBiomeType(worldX, worldZ);
+        float mobNoise = Mathf.PerlinNoise((worldX * mobNoiseScale) + mobOffsetX, (worldZ * mobNoiseScale) + mobOffsetZ);
+        for (int j = 0; j < biomeData.mobDatas.Length; j++)
+                {
+                    float aboveThreshold = 1f;
+                    if (j != 0)
+                    {
+                        aboveThreshold = biomeData.mobDatas[j - 1].spawnThreshold;
+                    }
+                    if (aboveThreshold > mobNoise && mobNoise > biomeData.mobDatas[j].spawnThreshold &&
+                    biomeData.mobDatas[j].mobPrefab != null)
+                    {
+                        return biomeData.mobDatas[j];
+                    }
+                }
+        return biomeData.mobDatas[0];
     }
 
     // Maps biome index to BiomeType enum
