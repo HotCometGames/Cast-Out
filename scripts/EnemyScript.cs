@@ -45,9 +45,13 @@ public class EnemyScript : MonoBehaviour
     [SerializeField] float walkSpeed = 5f;
     [SerializeField] float runSpeed = 12f;
     [SerializeField] float rotationTime = .2f;
+
+    //static
+    static public int enemyCount = 0;
     // Start is called before the first frame update
     void Start()
     {
+        enemyCount += 1;
         lastPosition = transform.position;
         targetPosition = GetRandomPositionInTerritory();
     }
@@ -110,6 +114,7 @@ public class EnemyScript : MonoBehaviour
     }
     void Die()  
     {
+        enemyCount -= 1;
         DropItems();
         Destroy(gameObject);
     }
