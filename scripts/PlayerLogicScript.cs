@@ -54,6 +54,14 @@ public class PlayerLogicScript : MonoBehaviour
     public GameObject plantPrefab;
     public GameObject fireballPrefab;
 
+    [Header("Creatures")]
+    public float creatureSpawnMaxDistance = 100f;
+    public float creatureSpawnMinDistance = 50f;
+    public float creatureSpawnInterval = 10f;
+    private float creatureSpawnTimer = 0f;
+    public int maxCreaturesToSpawnAtOnce = 3;
+    public int maxCreatures = 25;
+
     //Crafting
     public bool inCraftingRune = false;
 
@@ -76,6 +84,7 @@ public class PlayerLogicScript : MonoBehaviour
     void Update()
     {
         WhatAmILookingAt();
+        UpdateCreatureSpawning();
         if (currentLookAtTag == "Yuki")
         {
             float a = currentLookAtObject.transform.position.x - player.position.x;
@@ -526,6 +535,44 @@ public class PlayerLogicScript : MonoBehaviour
         {
             captions.text = text;
         }
+    }
+
+    void SpawnCreature(float maxDistance, float minDistance)
+    {
+        if(NearCross())
+        {
+            return;
+        }
+        float theta = UnityEngine.Random.Range(0f, 2f * Mathf.PI);
+        float radius = UnityEngine.Random.Range(minDistance, maxDistance);
+        Vector3 spawnPosition = new Vector3(player.position.x + radius * Mathf.Cos(theta), WorldGeneration2.GetHeight(player.position.x + radius * Mathf.Cos(theta), player.position.z + radius * Mathf.Sin(theta)), player.position.z + radius * Mathf.Sin(theta));
+        if(!WorldGeneration2.PosHasLava(spawnPosition.x, spawnPosition.z))
+        {
+            MobData mobToSpawn = WorldGeneration2.GetMobDataAtPosition(spawnPosition.x, spawnPosition.z);
+            GameObject enemyObject = Instantiate(mobToSpawn.mobPrefab, spawnPosition, Quaternion.identity);
+        }
+    }
+    void UpdateCreatureSpawning()
+    {
+        creatureSpawnTimer += Time.deltaTime;
+        if(creatureSpawnTimer >= creatureSpawnInterval)
+        {
+            creatureSpawnTimer = 0f;
+            int creaturesToSpawn = UnityEngine.Random.Range(1, maxCreaturesToSpawnAtOnce + 1);
+            for(int i = 0; i < creaturesToSpawn; i++)
+            {
+                if(EnemyScript.enemyCount >= maxCreatures)
+                {
+                    return;
+                }
+                SpawnCreature(creatureSpawnMaxDistance, creatureSpawnMinDistance);
+            }
+        }
+    }
+
+    bool NearCross()
+    {
+        return false;
     }
 
     void OnCollisionStay(Collision other)
