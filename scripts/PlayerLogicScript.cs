@@ -219,7 +219,8 @@ public class PlayerLogicScript : MonoBehaviour
                     tradeMenuScript.trades = trades;
                     tradeMenuScript.CreateTradeButtons();
                     tradeMenuUI.SetActive(true);
-                    break;
+                    ItemHoldingUIScript.PlayUseAnimation();
+                    return;
                 case "Item":
                     // Pick up item
                     ItemData itemPickup = currentLookAtObject.GetComponent<ItemPickup>()?.itemData;
@@ -238,12 +239,27 @@ public class PlayerLogicScript : MonoBehaviour
                             }
                         }
                     }
-                    break;
+                    ItemHoldingUIScript.PlayUseAnimation();
+                    return;
                 default:
                     break;
             }
-            ItemHoldingUIScript.PlayUseAnimation();
+            switch(inventory[item].name)
+            {
+                case "Mana Berry":
+                Debug.Log("Consuming Mana Berry...");
+                mana += 20;
+                if (mana > maxMana) { mana = maxMana; }
+                manaBar.value = mana;
+                inventory[item] = null;
+                UpdateHotbar();
+                break;
+                default:
+                    Debug.Log("Right click has no effect with this item.");
+                    return;
+            }
             return;
+            
         }
         if (inventory[item].manaCost > mana)
             {
@@ -283,7 +299,7 @@ public class PlayerLogicScript : MonoBehaviour
             case "Fire Wand":
                 // Cast a fire spell
                 Debug.Log("Casting fire spell...");
-                GameObject fireball = Instantiate(fireballPrefab, playerCamera.transform.position + playerCamera.transform.forward, Quaternion.identity);
+                GameObject fireball = Instantiate(fireballPrefab, playerCamera.transform.position + playerCamera.transform.forward, transform.rotation);
                 fireball.GetComponent<FireBallScript>().speed = 50f;
                 fireball.GetComponent<AttackScript>().owner = this.gameObject;
                 break;
@@ -332,6 +348,11 @@ public class PlayerLogicScript : MonoBehaviour
                         }
                     }
                     
+                } else
+                {
+                    GameObject punch1 = Instantiate(punchPrefab, player.position + player.forward * 1f, transform.rotation);
+                    punch1.GetComponent<AttackScript>().owner = this.gameObject;
+                    Debug.Log("Punching...");
                 }
                 break;
             case "Rock":
@@ -352,7 +373,11 @@ public class PlayerLogicScript : MonoBehaviour
                         }
                     }
                     UpdateHotbar();
-                    break;
+                } else
+                {
+                    GameObject punch1 = Instantiate(punchPrefab, player.position + player.forward * 1f, transform.rotation);
+                    punch1.GetComponent<AttackScript>().owner = this.gameObject;
+                    Debug.Log("Punching...");
                 }
                 break;
             case "Mana Berry":
@@ -549,6 +574,10 @@ public class PlayerLogicScript : MonoBehaviour
         if(!WorldGeneration2.PosHasLava(spawnPosition.x, spawnPosition.z))
         {
             MobData mobToSpawn = WorldGeneration2.GetMobDataAtPosition(spawnPosition.x, spawnPosition.z);
+            if(mobToSpawn == null)
+            {
+                return;
+            }
             GameObject enemyObject = Instantiate(mobToSpawn.mobPrefab, spawnPosition, Quaternion.identity);
         }
     }
