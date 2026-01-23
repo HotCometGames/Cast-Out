@@ -267,4 +267,14 @@ public class EnemyScript : MonoBehaviour
             }
         }
     }
+
+    public void OnChunkUnloaded()
+    {
+        enemyCount -= 1;
+    }
+
+    public void OnChunkLoaded()
+    {
+        enemyCount += 1;
+    }
 }
