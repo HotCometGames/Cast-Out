@@ -55,13 +55,15 @@ public class WorldGeneration2 : MonoBehaviour
 {
     [Header("Chunk Settings")]
     [SerializeField] int setChunkSize = 64;
-    static int chunkSize = 64;
+    public static int chunkSize = 64;
     [SerializeField] float setVertexSpacing = 2f;
     static float vertexSpacing = 2f;
     [SerializeField] int setBlendEdge = 3;
     static int blendEdge = 3;
     [SerializeField] int setRenderDistance = 3;
     static int renderDistance = 3;
+    [SerializeField] int setRenderDespawnDistance = 5;
+    static int renderDespawnDistance = 5;
 
     [Header("Noise Settings")]
     [SerializeField] float setBaseNoiseScale = 0.005f;
@@ -114,7 +116,8 @@ public class WorldGeneration2 : MonoBehaviour
     [Header("Seed Settings")]
     public int seed = 0;
 
-    private Dictionary<Vector2Int, GameObject> loadedChunks = new Dictionary<Vector2Int, GameObject>();
+    static private Dictionary<Vector2Int, GameObject> loadedChunks = new Dictionary<Vector2Int, GameObject>();
+    static private Dictionary<Vector2Int, List<GameObject>> chunkSavedObjects = new Dictionary<Vector2Int, List<GameObject>>();
 
     static float baseOffsetX, baseOffsetZ;
     static float mediumOffsetX, mediumOffsetZ;
@@ -133,6 +136,7 @@ public class WorldGeneration2 : MonoBehaviour
         vertexSpacing = setVertexSpacing;
         blendEdge = setBlendEdge;
         renderDistance = setRenderDistance;
+        renderDespawnDistance = setRenderDespawnDistance;
 
         baseNoiseScale = setBaseNoiseScale;
         mediumNoiseScale = setMediumNoiseScale;
@@ -200,6 +204,7 @@ public class WorldGeneration2 : MonoBehaviour
             }
         }
         // Unload chunks later
+        CheckWhichChunksToUnload(playerChunk, renderDespawnDistance);
     }
     
     // Initializes the biome textures in the blend material
@@ -286,6 +291,7 @@ public class WorldGeneration2 : MonoBehaviour
         GenerateLava(chunkObj, chunkCoord, biomeIndices);
         SpawnStructures(chunkObj, chunkCoord, biomeIndices);
         //SpawnMobs(chunkObj, chunkCoord, biomeIndices);
+        LoadSavedObjects(chunkCoord, chunkObj);
     }
 
     // Generates the mesh for the chunk at the given chunk coordinates
@@ -491,7 +497,10 @@ public class WorldGeneration2 : MonoBehaviour
 
                             if (prefabToSpawn != null)
                             {
-                                Instantiate(prefabToSpawn, pos, prefabToSpawn.transform.rotation, chunkObj.transform);
+                                if(!natureDatas[j].isItem || !ChunkHasSaveData(chunkCoord))
+                                {
+                                    Instantiate(prefabToSpawn, pos, prefabToSpawn.transform.rotation, chunkObj.transform);
+                                }         
                             }
                         }
                     }
@@ -836,6 +845,87 @@ public class WorldGeneration2 : MonoBehaviour
             }
         }
     }
+
+    void LoadSavedObjects(Vector2Int chunkCoord, GameObject chunkObj)
+    {
+        if (chunkSavedObjects.TryGetValue(chunkCoord, out List<GameObject> savedObjects))
+        {
+            foreach (var obj in savedObjects)
+            {
+                Instantiate(obj, chunkObj.transform);
+                obj.GetComponent<ChunkSavableObject>().OnChunkLoaded();
+            }
+        }
+    }
+
+    void UnloadChunk(Vector2Int chunkCoord)
+    {
+        if (loadedChunks.TryGetValue(chunkCoord, out GameObject chunkObj))
+        {
+            foreach(Transform child in chunkObj.transform)
+            {
+                if(child.gameObject.GetComponent<ChunkSavableObject>() != null)
+                {
+                    child.gameObject.GetComponent<ChunkSavableObject>().OnChunkUnloaded();
+                }
+            }
+            Destroy(chunkObj);
+            loadedChunks.Remove(chunkCoord);
+        }
+    }
+
+
+    void CheckWhichChunksToUnload(Vector2Int playerChunk, int renderDistance)
+    {
+        var chunksToUnload = new List<Vector2Int>();
+
+        foreach (var chunkCoord in loadedChunks.Keys)
+        {
+            if (Mathf.Abs(chunkCoord.x - playerChunk.x) > renderDistance || Mathf.Abs(chunkCoord.y - playerChunk.y) > renderDistance)
+            {
+                chunksToUnload.Add(chunkCoord);
+            }
+        }
+
+        foreach (var chunkCoord in chunksToUnload)
+        {
+            SaveChunkData(chunkCoord);
+            UnloadChunk(chunkCoord);
+        }
+    }
+
+    bool ChunkHasSaveData(Vector2Int chunkCoord)
+    {
+        return chunkSavedObjects.ContainsKey(chunkCoord);
+    }
+
+    void SaveChunkData(Vector2Int chunkCoord)
+    {
+        if (!loadedChunks.TryGetValue(chunkCoord, out GameObject chunkObj))
+        {
+            return; // Chunk doesn't exist, nothing to save
+        }
+        
+        List<GameObject> savedObjects = new List<GameObject>();
+        foreach(Transform child in chunkObj.transform)
+        {
+            // Save each child object data here
+            if (child.gameObject.GetComponent<ChunkSavableObject>() != null)
+            {
+                savedObjects.Add(child.gameObject.GetComponent<ChunkSavableObject>().ObjectPrefab);
+            }
+        }
+        chunkSavedObjects[chunkCoord] = savedObjects;
+    }
+
+    public static GameObject GetChunkObj(Vector2Int chunkCoord)
+    {
+        if (loadedChunks.TryGetValue(chunkCoord, out GameObject chunkObj))
+        {
+            return chunkObj;
+        }
+        return null;
+    }
     
     // Calculates the height of the terrain at a given world position
     public static float GetHeight(float worldX, float worldZ)
@@ -971,7 +1061,9 @@ public class WorldGeneration2 : MonoBehaviour
                         return biomeData.mobDatas[j];
                     }
                 }
-        return biomeData.mobDatas[0];
+        if(biomeData.mobDatas.Length > 0)
+            return biomeData.mobDatas[0];
+        return null;
     }
 
     // Maps biome index to BiomeType enum
