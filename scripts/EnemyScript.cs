@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.Animations;
 
 public class EnemyScript : MonoBehaviour
 {
@@ -45,6 +46,10 @@ public class EnemyScript : MonoBehaviour
     [SerializeField] float walkSpeed = 5f;
     [SerializeField] float runSpeed = 12f;
     [SerializeField] float rotationTime = .2f;
+
+    //Refferences
+    [SerializeField] Material defaultMaterial;
+    [SerializeField] Material hitMaterial;
 
     //static
     static public int enemyCount = 0;
@@ -110,7 +115,18 @@ public class EnemyScript : MonoBehaviour
         if(health <= 0)
         {
             Die();
+            return;
         }
+        else
+        {
+            StartCoroutine(FlashHitMaterial());
+        }
+    }
+    IEnumerator FlashHitMaterial()
+    {
+        GetComponent<Renderer>().material = hitMaterial;
+        yield return new WaitForSeconds(0.2f);
+        GetComponent<Renderer>().material = defaultMaterial;
     }
     void Die()  
     {
@@ -139,6 +155,7 @@ public class EnemyScript : MonoBehaviour
             if (lookDirection != Vector3.zero)
             {
                 Quaternion lookRotation = Quaternion.LookRotation(lookDirection);
+                lookRotation = Quaternion.Euler(0, lookRotation.eulerAngles.y, 0);
                 transform.rotation = lookRotation;
             }
 
@@ -152,6 +169,7 @@ public class EnemyScript : MonoBehaviour
             if (lookDirection != Vector3.zero)
             {
                 Quaternion lookRotation = Quaternion.LookRotation(lookDirection);
+                lookRotation = Quaternion.Euler(0, lookRotation.eulerAngles.y, 0);
                 transform.rotation = lookRotation;
             }
 
@@ -161,6 +179,14 @@ public class EnemyScript : MonoBehaviour
             TryToAttackPlayer();
         } else
         {
+            Vector3 toPlayer = PlayerMovement.instance.position - transform.position;
+            Vector3 lookDirection = toPlayer.normalized;
+            if (lookDirection != Vector3.zero)
+            {
+                Quaternion lookRotation = Quaternion.LookRotation(lookDirection);
+                lookRotation = Quaternion.Euler(0, lookRotation.eulerAngles.y, 0);
+                transform.rotation = lookRotation;
+            }
             rb.velocity = Vector3.zero;
             TryToAttackPlayer();
         }
@@ -184,6 +210,7 @@ public class EnemyScript : MonoBehaviour
                 if (lookDirection != Vector3.zero)
                 {
                     Quaternion lookRotation = Quaternion.LookRotation(lookDirection);
+                    lookRotation = Quaternion.Euler(0, lookRotation.eulerAngles.y, 0);
                     transform.rotation = lookRotation;
                 }
 
@@ -263,7 +290,7 @@ public class EnemyScript : MonoBehaviour
             if(roll <= chance)
             {
                 //drop the item
-                GameObject itemObject = Instantiate(drops[i].prefab, transform.position, Quaternion.identity);
+                GameObject itemObject = Instantiate(drops[i].prefabDefinition.prefab, transform.position, Quaternion.identity);
             }
         }
     }
