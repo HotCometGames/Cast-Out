@@ -3,10 +3,16 @@ using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
 
+[CreateAssetMenu(menuName = "Chunk/Saveable Object")]
+public class ChunkObjectDefinition : ScriptableObject
+{
+    public GameObject prefab;
+}
+
 public class ChunkSavableObject : MonoBehaviour
 {
     Vector2Int lastChunkCoord;
-    public GameObject ObjectPrefab;
+    public ChunkObjectDefinition ObjectPrefab;
     void Start()
     {
         JoinChunk();
