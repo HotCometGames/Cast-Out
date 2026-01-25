@@ -12,7 +12,7 @@ public class ItemData
 {
     public string name;
     public Sprite sprite;
-    public GameObject prefab;
+    public ChunkObjectDefinition prefabDefinition;
     public int manaCost;
 }
 public class PlayerLogicScript : MonoBehaviour
@@ -41,6 +41,7 @@ public class PlayerLogicScript : MonoBehaviour
     public Transform player;
     public PlayerMovement playerMovement;
     public Camera playerCamera;
+    public Transform cameraTransform;
     public TextMeshProUGUI captions;
     public GameObject inventoryUI;
     public GameObject tradeMenuUI;
@@ -299,7 +300,7 @@ public class PlayerLogicScript : MonoBehaviour
             case "Fire Wand":
                 // Cast a fire spell
                 Debug.Log("Casting fire spell...");
-                GameObject fireball = Instantiate(fireballPrefab, playerCamera.transform.position + playerCamera.transform.forward, transform.rotation);
+                GameObject fireball = Instantiate(fireballPrefab, playerCamera.transform.position + playerCamera.transform.forward, cameraTransform.rotation);
                 fireball.GetComponent<FireBallScript>().speed = 50f;
                 fireball.GetComponent<AttackScript>().owner = this.gameObject;
                 break;
@@ -350,7 +351,7 @@ public class PlayerLogicScript : MonoBehaviour
                     
                 } else
                 {
-                    GameObject punch1 = Instantiate(punchPrefab, player.position + player.forward * 1f, transform.rotation);
+                    GameObject punch1 = Instantiate(punchPrefab, player.position + cameraTransform.forward * 2f, cameraTransform.rotation);
                     punch1.GetComponent<AttackScript>().owner = this.gameObject;
                     Debug.Log("Punching...");
                 }
@@ -375,7 +376,7 @@ public class PlayerLogicScript : MonoBehaviour
                     UpdateHotbar();
                 } else
                 {
-                    GameObject punch1 = Instantiate(punchPrefab, player.position + player.forward * 1f, transform.rotation);
+                    GameObject punch1 = Instantiate(punchPrefab, player.position + cameraTransform.forward * 2f, cameraTransform.rotation);
                     punch1.GetComponent<AttackScript>().owner = this.gameObject;
                     Debug.Log("Punching...");
                 }
@@ -389,7 +390,7 @@ public class PlayerLogicScript : MonoBehaviour
                 UpdateHotbar();
                 break;
             default:
-                GameObject punch = Instantiate(punchPrefab, player.position + player.forward * 1f, transform.rotation);
+                GameObject punch = Instantiate(punchPrefab, player.position + cameraTransform.forward * 2f, cameraTransform.rotation);
                 punch.GetComponent<AttackScript>().owner = this.gameObject;
                 Debug.Log("Punching...");
                 break;
@@ -489,12 +490,12 @@ public class PlayerLogicScript : MonoBehaviour
 
         // Instantiate the item's prefab in front of the player
         Vector3 dropPosition = player.position + player.forward * 2f;
-        if (inventory[item].prefab != null)
+        if (inventory[item].prefabDefinition.prefab != null)
         {
-            Instantiate(inventory[item].prefab, dropPosition, Quaternion.identity);
+            Instantiate(inventory[item].prefabDefinition.prefab, dropPosition, Quaternion.identity);
             Debug.Log($"Dropped item: {inventory[item].name}");
             // Remove the item from the inventory
-            inventory[item] = null;
+            inventory[item] = new ItemData();
             UpdateHotbar();
         }
         else
@@ -578,6 +579,7 @@ public class PlayerLogicScript : MonoBehaviour
             {
                 return;
             }
+            spawnPosition += new Vector3(0f, mobToSpawn.mobPrefab.GetComponent<EnemyScript>().height/2, 0f);
             GameObject enemyObject = Instantiate(mobToSpawn.mobPrefab, spawnPosition, Quaternion.identity);
         }
     }
