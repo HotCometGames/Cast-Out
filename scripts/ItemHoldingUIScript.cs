@@ -4,7 +4,10 @@ using UnityEngine;
 using UnityEngine.UI;
 
 public class ItemHoldingUIScript : MonoBehaviour
+
 {
+    [SerializeField] Sprite handReference;
+    static Sprite hand;
     [SerializeField] static private Animator animator;
     [SerializeField] static private Image targetImage;
     static public float playerSpeed = 0;
@@ -12,6 +15,7 @@ public class ItemHoldingUIScript : MonoBehaviour
     static private float useAnimationTimer = 0;
     void Awake()
     {
+        hand = handReference;
         animator = GetComponent<Animator>();
         targetImage = GetComponent<Image>();
     }
@@ -50,8 +54,8 @@ public class ItemHoldingUIScript : MonoBehaviour
 
     static public void ClearSprite()
     {
-        targetImage.sprite = null;
-        targetImage.enabled = false;
+        targetImage.sprite = hand;
+        targetImage.enabled = true;
     }
     static public void PlayUseAnimation()
     {
