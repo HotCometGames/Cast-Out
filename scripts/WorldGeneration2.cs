@@ -910,9 +910,15 @@ public class WorldGeneration2 : MonoBehaviour
         foreach(Transform child in chunkObj.transform)
         {
             // Save each child object data here
-            if (child.gameObject.GetComponent<ChunkSavableObject>() != null)
+            ChunkSavableObject savable = child.gameObject.GetComponent<ChunkSavableObject>();
+            if (savable != null)
             {
-                savedObjects.Add(child.gameObject.GetComponent<ChunkSavableObject>().ObjectPrefab);
+                if(savable.ObjectPrefab.prefab == null)
+                {
+                    Debug.LogWarning($"ChunkSavableObject on {child.gameObject.name} has no ObjectPrefab assigned. Skipping save.");
+                    continue;
+                }
+                savedObjects.Add(savable.ObjectPrefab.prefab);
             }
         }
         chunkSavedObjects[chunkCoord] = savedObjects;
