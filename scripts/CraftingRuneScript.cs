@@ -67,7 +67,7 @@ public class CraftingRuneScript : MonoBehaviour
                 }
                 for (int i = 0; i < craftingResults[craftingRecipes.IndexOf(recipe)].Count; i++)
                 {
-                    Instantiate(craftingResults[craftingRecipes.IndexOf(recipe)][i].prefab, transform.position + Vector3.up * 2.0f, Quaternion.identity);
+                    Instantiate(craftingResults[craftingRecipes.IndexOf(recipe)][i].prefabDefinition.prefab, transform.position + Vector3.up * 2.0f, Quaternion.identity);
                 }
                 return;
             }
