@@ -6,7 +6,7 @@ public class AttackScript : MonoBehaviour
 {
     public GameObject owner;
 
-    public int damage = 0;
+    public float damage = 0;
     public float attackDuration = 0.5f;
     public float rotationOffset = 0f;
     private float attackTimer = 0f;
