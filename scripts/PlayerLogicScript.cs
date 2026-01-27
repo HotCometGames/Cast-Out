@@ -28,6 +28,8 @@ public class PlayerLogicScript : MonoBehaviour
     public int slotTradeSelected = -1;
     public bool inMenu = false;
     [Header("Player Stats")]
+    public EntityStatHandler entityStats;
+    //Eventually delete these and use entityStatHandler instead, also start using damage multipliers from it, in the attack area.
     public int health = 100;
     public int maxHealth = 100;
     public int mana = 50;
@@ -77,8 +79,8 @@ public class PlayerLogicScript : MonoBehaviour
         UpdateHotbar();
         manaBar.maxValue = maxMana;
         manaBar.value = mana;
-        healthBar.maxValue = maxHealth;
-        healthBar.value = health;
+        healthBar.maxValue = entityStats.maxHealth;
+        healthBar.value = entityStats.currentHealth;
     }
 
     // Update is called once per frame
@@ -674,20 +676,29 @@ public class PlayerLogicScript : MonoBehaviour
         }
     }
 
-    public void takeDamage(int damage)
+    public void takeDamage(float damage)
     {
         if (Time.time - lastDamageTimer < damageCooldown)
         {
             return;
         }
         lastDamageTimer = Time.time;
-        health -= damage;
-        if (health < 0) { health = 0; }
-        healthBar.value = health;
-        if (health == 0)
+        entityStats.currentHealth -= damage;
+        if (entityStats.currentHealth < 0) { entityStats.currentHealth = 0; }
+        healthBar.value = entityStats.currentHealth;
+        StartCoroutine(FlashOnDamage(Color.red, 0.2f));
+        if (entityStats.currentHealth == 0)
         {
             // Handle player death
             Debug.Log("Player has died.");
         }
+    }
+
+    IEnumerator FlashOnDamage(Color flashColor, float flashDuration)
+    {
+        // Ill figure out later
+
+        yield return new WaitForSeconds(flashDuration);
+
     }
 }
