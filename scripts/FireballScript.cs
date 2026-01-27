@@ -14,13 +14,4 @@ public class FireBallScript : MonoBehaviour
         Rigidbody rb = GetComponent<Rigidbody>();
         rb.velocity = transform.forward * speed;
     }
-
-    // Update is called once per frame
-    void Update()
-    {
-        if(Vector3.Distance(startPosition, transform.position) >= maxDistance)
-        {
-            Destroy(gameObject);
-        }
-    }
 }
