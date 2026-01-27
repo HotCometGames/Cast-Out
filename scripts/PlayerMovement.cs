@@ -5,9 +5,11 @@ using UnityEngine;
 public class PlayerMovement : MonoBehaviour
 {
     public static Transform instance;
+    public EntityStatHandler entityStats;
     public float moveSpeed = 5f;
     public float lookSpeed = 2f;
     public float jumpForce = 5f;
+    public float moveToJumpRatio = 0.5f;
     public float gravity = -9.81f;
     public bool inputEnabled = true;
 
@@ -24,6 +26,7 @@ public class PlayerMovement : MonoBehaviour
     void Awake()
     {
         instance = this.transform;
+        moveToJumpRatio = jumpForce / entityStats.maxSpeed;
     }
 
     void Start()
@@ -53,19 +56,19 @@ public class PlayerMovement : MonoBehaviour
             float moveX = Input.GetAxis("Horizontal");
             float moveZ = Input.GetAxis("Vertical");
             Vector3 move = transform.right * moveX + transform.forward * moveZ;
-            move *= moveSpeed * debugAppliedMultiplier;
+            move *= entityStats.currentSpeed * debugAppliedMultiplier;
 
             Vector3 velocity = rb.velocity;
             velocity.x = move.x;
             velocity.z = move.z;
             rb.velocity = new Vector3(velocity.x, rb.velocity.y, velocity.z);
             float currentSpeed = new Vector3(rb.velocity.x, 0, rb.velocity.z).magnitude;
-            ItemHoldingUIScript.SetSpeed(currentSpeed / (moveSpeed * debugAppliedMultiplier));
+            ItemHoldingUIScript.SetSpeed(currentSpeed / (entityStats.currentSpeed * debugAppliedMultiplier));
 
             // Jumping
             if (isGrounded && Input.GetButtonDown("Jump"))
             {
-                rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+                rb.AddForce(Vector3.up * moveToJumpRatio * entityStats.currentSpeed, ForceMode.Impulse);
             }
         } else
         {
