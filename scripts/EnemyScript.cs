@@ -8,9 +8,10 @@ using UnityEngine.Animations;
 public class EnemyScript : MonoBehaviour
 {
     [Header("Stats")]
+    [SerializeField] public EntityStatHandler entityStats;
     [SerializeField] public float height = 1;
     [SerializeField] public int health = 25;
-    [SerializeField] int damage = 10;
+    [SerializeField] float damage = 10;
     [SerializeField] float attackDuration = 0.5f;
     [Header("Drop Data")]
     [SerializeField] ItemData[] drops;
@@ -45,7 +46,6 @@ public class EnemyScript : MonoBehaviour
     //movement speeds
     [SerializeField] float walkSpeed = 5f;
     [SerializeField] float runSpeed = 12f;
-    [SerializeField] float rotationTime = .2f;
 
     //Refferences
     [SerializeField] Material defaultMaterial;
@@ -104,15 +104,15 @@ public class EnemyScript : MonoBehaviour
         }  
     }
 
-    void takeDamage(int damageAmount)
+    void takeDamage(float damageAmount)
     {
         if(lastDamageTimer > 0)
         {
             return;
         }
         lastDamageTimer = damageCooldown;
-        health -= damageAmount;
-        if(health <= 0)
+        entityStats.currentHealth -= damageAmount;
+        if(entityStats.currentHealth <= 0)
         {
             Die();
             return;
@@ -160,7 +160,7 @@ public class EnemyScript : MonoBehaviour
             }
 
             //move towards player
-            rb.velocity = lookDirection * runSpeed;
+            rb.velocity = lookDirection * entityStats.currentSpeed;
         } else if(GetDistanceToPlayer() > attackDistanceMin)
         {
             //look at player
@@ -174,7 +174,12 @@ public class EnemyScript : MonoBehaviour
             }
 
             //move towards player
-            rb.velocity = lookDirection * walkSpeed;
+            float thisSpeed = walkSpeed;
+            if (entityStats.currentSpeed < walkSpeed)
+            {
+                thisSpeed = entityStats.currentSpeed;
+            }
+            rb.velocity = lookDirection * thisSpeed;
 
             TryToAttackPlayer();
         } else
@@ -216,7 +221,12 @@ public class EnemyScript : MonoBehaviour
 
                 //move towards target
                 
-                rb.velocity = lookDirection * walkSpeed;
+                float thisSpeed = walkSpeed;
+                if (entityStats.currentSpeed < walkSpeed)
+                {
+                    thisSpeed = entityStats.currentSpeed;
+                }
+                rb.velocity = lookDirection * thisSpeed;
                 
             }
         } else
@@ -248,12 +258,16 @@ public class EnemyScript : MonoBehaviour
     void AttackPlayer()
     {
         //instantiate attack prefab
-        GameObject attackObject = Instantiate(attackPrefab, transform.position + transform.forward * (height/2), transform.rotation);
+        Vector3 toPlayer = PlayerMovement.instance.position - transform.position;
+        Vector3 lookDirection = toPlayer.normalized;
+        Vector3 attackPosition = transform.position + lookDirection * (height / 2);
+        Quaternion lookRotation = Quaternion.LookRotation(lookDirection);
+        GameObject attackObject = Instantiate(attackPrefab, attackPosition, lookRotation);
         AttackScript attackScript = attackObject.GetComponent<AttackScript>();
         if(attackScript != null)
         {
             attackScript.owner = this.gameObject;
-            attackScript.damage = damage;
+            attackScript.damage = entityStats.currentDamage;
             attackScript.attackDuration = attackDuration;
             attackObject.transform.position += transform.forward * attackScript.spawnOffset;
         }
