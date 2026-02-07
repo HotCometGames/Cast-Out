@@ -6,9 +6,7 @@ using UnityEngine;
 public class Trade
 {
     public ItemData[] itemCosts;
-    public int goldCost;
     public ItemData[] itemGains;
-    public int goldGain;
 }
 
 [System.Serializable]
