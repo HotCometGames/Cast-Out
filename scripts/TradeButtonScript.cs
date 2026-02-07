@@ -72,11 +72,6 @@ public class TradeButtonScript : MonoBehaviour
                 return; // Exit if any item cost is not found
             }
         }
-        if (player.gold < trade.goldCost)
-        {
-            Debug.Log("Trade failed: not enough gold");
-            return; // Exit if not enough gold
-        }
         for (int i = 0; i < trade.itemGains.Length; i++)
         {
             bool added = false;
@@ -96,8 +91,6 @@ public class TradeButtonScript : MonoBehaviour
             }
         }
         player.inventory = inventory;
-        player.gold -= trade.goldCost;
-        player.gold += trade.goldGain;
         player.UpdateHotbar();
         Debug.Log("Trade successful!");
     }
