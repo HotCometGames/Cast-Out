@@ -30,8 +30,6 @@ public class PlayerLogicScript : MonoBehaviour
     [Header("Player Stats")]
     public EntityStatHandler entityStats;
     //Eventually delete these and use entityStatHandler instead, also start using damage multipliers from it, in the attack area.
-    public int health = 100;
-    public int maxHealth = 100;
     public int mana = 50;
     public int maxMana = 50;
     public float maxSpellDistance = 10f;
@@ -257,6 +255,14 @@ public class PlayerLogicScript : MonoBehaviour
                 inventory[item] = null;
                 UpdateHotbar();
                 break;
+                case "Bread":
+                Debug.Log("Consuming Bread...");
+                entityStats.currentHealth += 20;
+                if (entityStats.currentHealth > entityStats.maxHealth) { entityStats.currentHealth = entityStats.maxHealth; }
+                healthBar.value = entityStats.currentHealth;
+                inventory[item] = null;
+                UpdateHotbar();
+                break;
                 default:
                     Debug.Log("Right click has no effect with this item.");
                     return;
@@ -382,14 +388,6 @@ public class PlayerLogicScript : MonoBehaviour
                     punch1.GetComponent<AttackScript>().owner = this.gameObject;
                     Debug.Log("Punching...");
                 }
-                break;
-            case "Mana Berry":
-                Debug.Log("Consuming Mana Berry...");
-                mana += 20;
-                if (mana > maxMana) { mana = maxMana; }
-                manaBar.value = mana;
-                inventory[item] = null;
-                UpdateHotbar();
                 break;
             default:
                 GameObject punch = Instantiate(punchPrefab, player.position + cameraTransform.forward * 2f, cameraTransform.rotation);
