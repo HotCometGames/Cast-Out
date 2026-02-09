@@ -218,6 +218,8 @@ public class PlayerLogicScript : MonoBehaviour
                     tradeMenuScript.ClearTradeButtons();
                     List<Trade> trades = currentLookAtObject.GetComponent<OrcScript>().trades;
                     tradeMenuScript.trades = trades;
+                    string traderName = currentLookAtObject.GetComponent<OrcScript>().traderName;
+                    tradeMenuScript.traderName = traderName;
                     tradeMenuScript.CreateTradeButtons();
                     tradeMenuUI.SetActive(true);
                     ItemHoldingUIScript.PlayUseAnimation();
