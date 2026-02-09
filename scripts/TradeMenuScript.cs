@@ -1,6 +1,8 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
 [System.Serializable]
 public class Trade
@@ -17,9 +19,11 @@ public class MultiTrade
 
 public class TradeMenuScript : MonoBehaviour
 {
+    public string traderName;
     public List<Trade> trades;
     public GameObject tradeButtonPrefab;
     public List<GameObject> tradeButtons = new List<GameObject>();
+    public TMP_Text traderNameText;
     // Start is called before the first frame update
     void Start()
     {
@@ -31,7 +35,7 @@ public class TradeMenuScript : MonoBehaviour
         for (int i = 0; i < trades.Count; i++)
         {
             Trade trade = trades[i];
-            Vector3 localPos = new Vector3(0, 100 - (i * 50), 0); // Set the desired position for the button
+            Vector3 localPos = new Vector3(0, 80 - (i * 50), 0); // Set the desired position for the button
             GameObject button = Instantiate(tradeButtonPrefab, transform);
             RectTransform rt = button.GetComponent<RectTransform>();
             rt.localPosition = localPos;
@@ -39,6 +43,7 @@ public class TradeMenuScript : MonoBehaviour
             tbs.trade = trade;
             tradeButtons.Add(button);
         }
+        traderNameText.text = traderName;
     }
 
     public void ClearTradeButtons()
@@ -48,5 +53,6 @@ public class TradeMenuScript : MonoBehaviour
             Destroy(button);
         }
         tradeButtons.Clear();
+        traderNameText.text = "";
     }
 }
