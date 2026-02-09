@@ -4,8 +4,10 @@ using UnityEngine;
 
 public class OrcScript : MonoBehaviour
 {
+    public string traderName;
     public List<MultiTrade> possibleTrades;
     public List<Trade> trades;
+    public List<Trade> AsaiahTrades;
     [SerializeField] GameObject glasses;
     void Start()
     {
@@ -16,6 +18,8 @@ public class OrcScript : MonoBehaviour
         if (glassesChance < 20) // 20% chance to spawn with glasses
         {
             glasses.SetActive(true);
+            traderName = "Asaiah the coolest";
+            trades = AsaiahTrades;
         }
         else
         {
