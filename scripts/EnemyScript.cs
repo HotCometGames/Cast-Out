@@ -13,6 +13,8 @@ public class EnemyScript : MonoBehaviour
     [SerializeField] public int health = 25;
     [SerializeField] float damage = 10;
     [SerializeField] float attackDuration = 0.5f;
+    [SerializeField] bool passive = false;
+    [SerializeField] string personality = "Neutral";
     [Header("Drop Data")]
     [SerializeField] ItemData[] drops;
     [SerializeField] float[] dropChances; //should be same length as drops array
@@ -73,7 +75,13 @@ public class EnemyScript : MonoBehaviour
             MovementDecision();
         } else
         {
-            ChasePlayer();
+            if(!passive)
+            {
+                ChasePlayer();
+            } else if(personality == "Friendly")
+            {
+                GreetPlayer();
+            }
         }
         GetAboveGroundPosition();
     }
@@ -197,6 +205,42 @@ public class EnemyScript : MonoBehaviour
         }
     }
 
+    void GreetPlayer()
+    {
+        if(GetDistanceToPlayer() > attackDistanceMin)
+        {
+            //look at player
+            Vector3 toPlayer = PlayerMovement.instance.position - transform.position;
+            Vector3 lookDirection = toPlayer.normalized;
+            if (lookDirection != Vector3.zero)
+            {
+                Quaternion lookRotation = Quaternion.LookRotation(lookDirection);
+                lookRotation = Quaternion.Euler(0, lookRotation.eulerAngles.y, 0);
+                transform.rotation = lookRotation;
+            }
+
+            //move towards player
+            float thisSpeed = walkSpeed;
+            if (entityStats.currentSpeed < walkSpeed)
+            {
+                thisSpeed = entityStats.currentSpeed;
+            }
+            rb.velocity = lookDirection * thisSpeed;
+
+        } else
+        {
+            Vector3 toPlayer = PlayerMovement.instance.position - transform.position;
+            Vector3 lookDirection = toPlayer.normalized;
+            if (lookDirection != Vector3.zero)
+            {
+                Quaternion lookRotation = Quaternion.LookRotation(lookDirection);
+                lookRotation = Quaternion.Euler(0, lookRotation.eulerAngles.y, 0);
+                transform.rotation = lookRotation;
+            }
+            rb.velocity = Vector3.zero;
+        }
+    }
+
     void MovementDecision()
     {
         if(!isDeciding)
@@ -244,7 +288,7 @@ public class EnemyScript : MonoBehaviour
     void TryToAttackPlayer()
     {
         //attack logic here
-        if(lastAttackTime <= 0)
+        if(lastAttackTime <= 0 && !passive)
         {
             Debug.Log("Enemy attacked the player!");
             AttackPlayer();
