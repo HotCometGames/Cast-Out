@@ -13,6 +13,7 @@ public enum BiomeType
     LavaCast,
     Tundra,
     Desert,
+    ToxicSwamp
 
 }
 [System.Serializable]
@@ -97,6 +98,7 @@ public class WorldGeneration2 : MonoBehaviour
     [SerializeField] Material blendMaterial;
     [SerializeField] Material waterMaterial;
     [SerializeField] Material lavaMaterial;
+    [SerializeField] Material toxinMaterial;
 
     [Header("Biome Data")]
     [SerializeField] List<BiomeData> biomes; // Add all biome data here
@@ -112,6 +114,7 @@ public class WorldGeneration2 : MonoBehaviour
     [Header("References")]
     [SerializeField] Transform player;
     [SerializeField] GameObject spawnLight;
+    [SerializeField] GameObject swampParticles;
 
     [Header("Seed Settings")]
     public int seed = 0;
@@ -287,8 +290,10 @@ public class WorldGeneration2 : MonoBehaviour
         loadedChunks.Add(chunkCoord, chunkObj);
 
         SpawnVegetation(chunkObj, chunkCoord, biomeIndices, vertices);
-        GenerateWater(chunkObj, chunkCoord, biomeIndices);
-        GenerateLava(chunkObj, chunkCoord, biomeIndices);
+        GenerateLiquid(chunkObj, chunkCoord, biomeIndices, BiomeType.Ocean, waterMaterial, "Water", 0.7f);
+        GenerateLiquid(chunkObj, chunkCoord, biomeIndices, BiomeType.WaterRocks, waterMaterial, "Water", 0.7f);
+        GenerateLiquid(chunkObj, chunkCoord, biomeIndices, BiomeType.ToxicSwamp, toxinMaterial, "Toxin", 0.65f);
+        GenerateLiquid(chunkObj, chunkCoord, biomeIndices, BiomeType.LavaCast, lavaMaterial, "Lava", 0.7f);
         SpawnStructures(chunkObj, chunkCoord, biomeIndices);
         //SpawnMobs(chunkObj, chunkCoord, biomeIndices);
         LoadSavedObjects(chunkCoord, chunkObj);
@@ -558,13 +563,13 @@ public class WorldGeneration2 : MonoBehaviour
         }
     }
 
-    // Generates lava mesh in lava cast biomes
-    void GenerateLava(GameObject chunkObj, Vector2Int chunkCoord, int[] biomeIndices)
+    //Generates liquid meshes (water, lava, toxin) on the chunk based on biome and noise
+    void GenerateLiquid(GameObject chunkObj, Vector2Int chunkCoord, int[] biomeIndices, BiomeType biomeUsing, Material liquidMaterial, string liquidTag, float yMultiplier)
     {
         int vertsPerLine = chunkSize + 1;
-        List<Vector3> lavaVertices = new List<Vector3>();
-        List<int> lavaTriangles = new List<int>();
-        List<Vector2> lavaUVs = new List<Vector2>();
+        List<Vector3> vertices = new List<Vector3>();
+        List<int> liquidTriangles = new List<int>();
+        List<Vector2> liquidUVs = new List<Vector2>();
 
         int[,] vertexMap = new int[vertsPerLine, vertsPerLine];
         int vertCount = 0;
@@ -581,11 +586,11 @@ public class WorldGeneration2 : MonoBehaviour
                 BiomeType biomeTypeLeft = (x > 0) ? GetBiomeTypeFromIndex(biomeIndices[z * vertsPerLine + (x - 1)]) : biomeType;
                 BiomeType biomeTypeRight = (x < vertsPerLine - 1) ? GetBiomeTypeFromIndex(biomeIndices[z * vertsPerLine + (x + 1)]) : biomeType;
 
-                if (biomeType == BiomeType.LavaCast || 
-                    biomeTypeUp == BiomeType.LavaCast ||
-                    biomeTypeDown == BiomeType.LavaCast ||
-                    biomeTypeLeft == BiomeType.LavaCast ||
-                    biomeTypeRight == BiomeType.LavaCast)
+                if (biomeType == biomeUsing || 
+                    biomeTypeUp == biomeUsing ||
+                    biomeTypeDown == biomeUsing ||
+                    biomeTypeLeft == biomeUsing ||
+                    biomeTypeRight == biomeUsing)
                 {
                     float worldX = (chunkCoord.x * chunkSize + x) * vertexSpacing;
                     float worldZ = (chunkCoord.y * chunkSize + z) * vertexSpacing;
@@ -594,10 +599,10 @@ public class WorldGeneration2 : MonoBehaviour
                     float mediumNoise = Mathf.PerlinNoise((worldX * mediumNoiseScale) + mediumOffsetX, (worldZ * mediumNoiseScale) + mediumOffsetZ) * mediumHeight;
                     float smallNoise = Mathf.PerlinNoise((worldX * smallNoiseScale) + smallOffsetX, (worldZ * smallNoiseScale) + smallOffsetZ) * smallHeight;
 
-                    float lavaHeight = (baseNoise + mediumNoise + smallNoise) * 0.8f;
+                    float height = (baseNoise + mediumNoise + smallNoise) * yMultiplier;
 
-                    lavaVertices.Add(new Vector3(x * vertexSpacing, lavaHeight, z * vertexSpacing));
-                    lavaUVs.Add(new Vector2(x * 0.2f, z * 0.2f));
+                    vertices.Add(new Vector3(x * vertexSpacing, height, z * vertexSpacing));
+                    liquidUVs.Add(new Vector2(x * 0.2f, z * 0.2f));
                     vertexMap[x, z] = vertCount;
                     vertCount++;
                 }
@@ -622,144 +627,52 @@ public class WorldGeneration2 : MonoBehaviour
                 // Only create triangles if all four vertices exist (are water)
                 if (i00 != -1 && i10 != -1 && i01 != -1)
                 {
-                    lavaTriangles.Add(i00);
-                    lavaTriangles.Add(i01);
-                    lavaTriangles.Add(i10);
+                    liquidTriangles.Add(i00);
+                    liquidTriangles.Add(i01);
+                    liquidTriangles.Add(i10);
                 }
                 if (i10 != -1 && i01 != -1 && i11 != -1)
                 {
-                    lavaTriangles.Add(i10);
-                    lavaTriangles.Add(i01);
-                    lavaTriangles.Add(i11);
+                    liquidTriangles.Add(i10);
+                    liquidTriangles.Add(i01);
+                    liquidTriangles.Add(i11);
                 }
             }
         }
 
-        if (lavaVertices.Count > 0)
+        if (vertices.Count > 0)
         {
             Mesh lavaMesh = new Mesh();
-            lavaMesh.vertices = lavaVertices.ToArray();
-            lavaMesh.triangles = lavaTriangles.ToArray();
-            lavaMesh.uv = lavaUVs.ToArray();
+            lavaMesh.vertices = vertices.ToArray();
+            lavaMesh.triangles = liquidTriangles.ToArray();
+            lavaMesh.uv = liquidUVs.ToArray();
             lavaMesh.RecalculateNormals();
 
-            GameObject lavaObj = new GameObject("Lava");
-            lavaObj.transform.parent = chunkObj.transform;
-            lavaObj.transform.localPosition = Vector3.zero;
+            GameObject obj = new GameObject(liquidTag);
+            obj.transform.parent = chunkObj.transform;
+            obj.transform.localPosition = Vector3.zero;
 
-            MeshFilter mf = lavaObj.AddComponent<MeshFilter>();
-            MeshRenderer mr = lavaObj.AddComponent<MeshRenderer>();
+            MeshFilter mf = obj.AddComponent<MeshFilter>();
+            MeshRenderer mr = obj.AddComponent<MeshRenderer>();
             mf.mesh = lavaMesh;
 
             // Assign a lava material if you have one, otherwise use blendMaterial
-            mr.material = lavaMaterial;
+            mr.material = liquidMaterial;
 
-            lavaObj.tag = "Lava";
+            obj.tag = liquidTag;
 
-            MeshCollider mc = lavaObj.AddComponent<MeshCollider>();
+            MeshCollider mc = obj.AddComponent<MeshCollider>();
             mc.sharedMesh = lavaMesh;
             mc.convex = true;
             mc.isTrigger = true;
+
+            if(biomeUsing == BiomeType.ToxicSwamp)
+            {
+                Instantiate(swampParticles, obj.transform);
+            }
         }
     }
 
-    // Generates water mesh in water biomes
-    void GenerateWater(GameObject chunkObj, Vector2Int chunkCoord, int[] biomeIndices)
-    {
-        int vertsPerLine = chunkSize + 1;
-        List<Vector3> waterVertices = new List<Vector3>();
-        List<int> waterTriangles = new List<int>();
-        List<Vector2> waterUVs = new List<Vector2>();
-
-        int[,] vertexMap = new int[vertsPerLine, vertsPerLine];
-        int vertCount = 0;
-
-        for (int z = 0; z < vertsPerLine; z++)
-        {
-            for (int x = 0; x < vertsPerLine; x++)
-            {
-                int i = z * vertsPerLine + x;
-                int biomeIndex = biomeIndices[i];
-                BiomeType biomeType = GetBiomeTypeFromIndex(biomeIndex);
-                BiomeType biomeTypeUp = (z < vertsPerLine - 1) ? GetBiomeTypeFromIndex(biomeIndices[(z + 1) * vertsPerLine + x]) : biomeType;
-                BiomeType biomeTypeDown = (z > 0) ? GetBiomeTypeFromIndex(biomeIndices[(z - 1) * vertsPerLine + x]) : biomeType;
-                BiomeType biomeTypeLeft = (x > 0) ? GetBiomeTypeFromIndex(biomeIndices[z * vertsPerLine + (x - 1)]) : biomeType;
-                BiomeType biomeTypeRight = (x < vertsPerLine - 1) ? GetBiomeTypeFromIndex(biomeIndices[z * vertsPerLine + (x + 1)]) : biomeType;
-
-                if (biomeType == BiomeType.Ocean || biomeType == BiomeType.WaterRocks ||
-                    biomeTypeUp == BiomeType.Ocean || biomeTypeUp == BiomeType.WaterRocks ||
-                    biomeTypeDown == BiomeType.Ocean || biomeTypeDown == BiomeType.WaterRocks ||
-                    biomeTypeLeft == BiomeType.Ocean || biomeTypeLeft == BiomeType.WaterRocks ||
-                    biomeTypeRight == BiomeType.Ocean || biomeTypeRight == BiomeType.WaterRocks)
-                {
-                    float worldX = (chunkCoord.x * chunkSize + x) * vertexSpacing;
-                    float worldZ = (chunkCoord.y * chunkSize + z) * vertexSpacing;
-
-                    float baseNoise = Mathf.PerlinNoise((worldX * baseNoiseScale) + baseOffsetX, (worldZ * baseNoiseScale) + baseOffsetZ) * baseHeight;
-                    float mediumNoise = Mathf.PerlinNoise((worldX * mediumNoiseScale) + mediumOffsetX, (worldZ * mediumNoiseScale) + mediumOffsetZ) * mediumHeight;
-                    float smallNoise = Mathf.PerlinNoise((worldX * smallNoiseScale) + smallOffsetX, (worldZ * smallNoiseScale) + smallOffsetZ) * smallHeight;
-
-                    float waterHeight = (baseNoise + mediumNoise + smallNoise) * 0.8f;
-
-                    waterVertices.Add(new Vector3(x * vertexSpacing, waterHeight, z * vertexSpacing));
-                    waterUVs.Add(new Vector2(x * 0.2f, z * 0.2f));
-                    vertexMap[x, z] = vertCount;
-                    vertCount++;
-                }
-                else
-                {
-                    vertexMap[x, z] = -1;
-                }
-            }
-        }
-
-        // ChatGPT Generated Code
-        // Generate triangles for water mesh
-        for (int z = 0; z < vertsPerLine - 1; z++)
-        {
-            for (int x = 0; x < vertsPerLine - 1; x++)
-            {
-                int i00 = vertexMap[x, z];
-                int i10 = vertexMap[x + 1, z];
-                int i01 = vertexMap[x, z + 1];
-                int i11 = vertexMap[x + 1, z + 1];
-
-                // Only create triangles if all four vertices exist (are water)
-                if (i00 != -1 && i10 != -1 && i01 != -1)
-                {
-                    waterTriangles.Add(i00);
-                    waterTriangles.Add(i01);
-                    waterTriangles.Add(i10);
-                }
-                if (i10 != -1 && i01 != -1 && i11 != -1)
-                {
-                    waterTriangles.Add(i10);
-                    waterTriangles.Add(i01);
-                    waterTriangles.Add(i11);
-                }
-            }
-        }
-
-        if (waterVertices.Count > 0)
-        {
-            Mesh waterMesh = new Mesh();
-            waterMesh.vertices = waterVertices.ToArray();
-            waterMesh.triangles = waterTriangles.ToArray();
-            waterMesh.uv = waterUVs.ToArray();
-            waterMesh.RecalculateNormals();
-
-            GameObject waterObj = new GameObject("Water");
-            waterObj.transform.parent = chunkObj.transform;
-            waterObj.transform.localPosition = Vector3.zero;
-
-            MeshFilter mf = waterObj.AddComponent<MeshFilter>();
-            MeshRenderer mr = waterObj.AddComponent<MeshRenderer>();
-            mf.mesh = waterMesh;
-
-            
-            mr.material = waterMaterial;
-        }
-    }
 
     // Spawns structures on the chunk based on biome and noise
     void SpawnStructures(GameObject chunkObj, Vector2Int chunkCoord, int[] biomeIndices)
@@ -943,8 +856,51 @@ public class WorldGeneration2 : MonoBehaviour
         float height = baseNoise + mediumNoise + smallNoise;
 
         float tempVal = Mathf.PerlinNoise((worldX * biomeTempNoiseScale) + biomeTempOffsetX, (worldZ * biomeTempNoiseScale) + biomeTempOffsetZ);
+        string biomeTemp = GetBiomeTemp(worldX, worldZ);
+        int biomeTempThresholdIndex = 0;
+        List<BiomeData> biomeUsing = hotBiomes;
+        switch (biomeTemp)
+        {
+            case "hot":
+                biomeTempThresholdIndex = 0;
+                biomeUsing = hotBiomes;
+                break;
+            case "neutral":
+                biomeTempThresholdIndex = 1;
+                biomeUsing = neutralBiomes;
+                break;
+            case "cold":
+                biomeTempThresholdIndex = 2;
+                biomeUsing = coldBiomes;
+                break;
+        }
 
         (BiomeData biomeData, float biomeDeciderVal, int biomeDeciderIndex) = GetBiomeType(worldX, worldZ);
+        float aboveDeciderThreshold = biomeData.biomeThreshold;
+        float belowDeciderThreshold = 0;
+        float aboveTempThreshold = biomeTempThresholds[biomeTempThresholdIndex];
+        float belowTempThreshold = 0;
+        if(biomeDeciderIndex != 0)
+        {
+            belowDeciderThreshold = biomeUsing[biomeDeciderIndex-1].biomeThreshold;
+        }
+        if(biomeTempThresholdIndex != 0)
+        {
+            belowTempThreshold = biomeTempThresholds[biomeTempThresholdIndex - 1];
+        }
+
+
+        
+
+        if (biomeData.biomeType == BiomeType.Ocean)
+        {
+            height *= 0.5f;
+        }
+
+        if(aboveDeciderThreshold - biomeDeciderVal < 0.005f || biomeDeciderVal - belowDeciderThreshold < 0.005f || aboveTempThreshold - tempVal < 0.005f || tempVal - belowTempThreshold < 0.005f)
+        {
+            return height;
+        }
 
 
         if (biomeData.biomeType == BiomeType.Mountain)
@@ -955,10 +911,6 @@ public class WorldGeneration2 : MonoBehaviour
             if (possibleNewHeight > height)
                 height = possibleNewHeight;
         }
-        if (biomeData.biomeType == BiomeType.Ocean)
-        {
-            height *= 0.5f;
-        }
         if (biomeData.biomeType == BiomeType.WaterRocks)
         {
             height *= 0.1f;
@@ -966,10 +918,6 @@ public class WorldGeneration2 : MonoBehaviour
         }
         if (biomeData.biomeType == BiomeType.LavaCast)
         {
-            if(biomeDeciderVal - hotBiomes[biomeDeciderIndex-1].biomeThreshold < 0.005f || biomeTempThresholds[0] - tempVal < 0.01f)
-            {
-                return height;
-            }
             if (mediumNoise / mediumHeight > 0.95f)
             {
                 height += 45f;
@@ -985,6 +933,13 @@ public class WorldGeneration2 : MonoBehaviour
             else if (mediumNoise / mediumHeight > 0.2f)
             {
                 height *= .6f;
+            }
+        }
+        if(biomeData.biomeType == BiomeType.ToxicSwamp)
+        {
+            if(baseNoise / baseHeight < 0.36f)
+            {
+                height -= 10f;
             }
         }
         return height;
@@ -1093,6 +1048,8 @@ public class WorldGeneration2 : MonoBehaviour
                 return BiomeType.Tundra;
             case 7:
                 return BiomeType.Desert;
+            case 8:
+                return BiomeType.ToxicSwamp;
             default:
                 return BiomeType.Plains;
         }
