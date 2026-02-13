@@ -84,6 +84,7 @@ public class PlayerLogicScript : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        UpdateHealth();
         WhatAmILookingAt();
         UpdateCreatureSpawning();
         if (currentLookAtTag == "Yuki")
@@ -687,6 +688,16 @@ public class PlayerLogicScript : MonoBehaviour
         if (entityStats.currentHealth < 0) { entityStats.currentHealth = 0; }
         healthBar.value = entityStats.currentHealth;
         StartCoroutine(FlashOnDamage(Color.red, 0.2f));
+        if (entityStats.currentHealth == 0)
+        {
+            // Handle player death
+            Debug.Log("Player has died.");
+        }
+    }
+
+    void UpdateHealth()
+    {
+        healthBar.value = entityStats.currentHealth;
         if (entityStats.currentHealth == 0)
         {
             // Handle player death
