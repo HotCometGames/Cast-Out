@@ -13,3 +13,6 @@ Added enemy drops
 
 Decemeber 18, 2025
 Added a way to craft, when an object is in the crafting space, it gets added to the list of current aviable objects, and it checks if it matches a recipe, if it does, it provides the outcome. I also made all items trigger colliders, as well as giving them a procedual animation made using code.
+
+Feburary 12, 2025
+Its been a while since I wrote one of these, I have been updating the game slowly, but havent been able to invest too much time because of school. There are new stronger mini bosses, Sky shader, new orc trades, friendly mobs, chunk save system, new biomes (desert, tundra, toxic swamp). I have a short form content series going on right now, and I have over 600 followers on social media, with about 50,000 views on the project in the past week. Hopefully I will create a steam page soon
