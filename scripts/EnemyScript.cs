@@ -66,6 +66,7 @@ public class EnemyScript : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        UpdateHealth();
         if(lastDamageTimer > 0)
         {
             lastDamageTimer -= Time.deltaTime;
@@ -128,6 +129,13 @@ public class EnemyScript : MonoBehaviour
         else
         {
             StartCoroutine(FlashHitMaterial());
+        }
+    }
+    void UpdateHealth()
+    {
+        if (entityStats.currentHealth <= 0)
+        {
+            Die();
         }
     }
     IEnumerator FlashHitMaterial()
