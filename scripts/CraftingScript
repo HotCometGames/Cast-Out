@@ -1,0 +1,164 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using TMPro;
+using UnityEngine.UI;
+using Unity.VisualScripting;
+
+[System.Serializable]
+public class CraftingRecipe
+{
+    public List<ItemData> requiredItems;
+    public ItemData resultItem;
+}
+[System.Serializable]
+public class CraftingCategory
+{
+    public string categoryName;
+    public List<CraftingRecipe> recipes;
+}
+
+
+public class CraftingScript : MonoBehaviour
+{
+    CraftingRecipe currentRecipe;
+    [SerializeField] List<CraftingCategory> craftingCategories;
+    [SerializeField] int currentCategoryIndex = 0;
+
+    [SerializeField] Image currentRecipeImage;
+    [SerializeField] TextMeshProUGUI currentRecipeText;
+
+    [SerializeField] GameObject craftingCostPrefab;
+    [SerializeField] GameObject costContainer;
+    [SerializeField] GameObject craftingOptionsPrefab;
+    [SerializeField] GameObject craftingOptionsContainer;
+    
+    [SerializeField] PlayerLogicScript playerLogicScript;
+    // Start is called before the first frame update
+    void Start()
+    {
+        ButtonSetCategory(0);
+        ButtonSetRecipe(0);
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        
+    }
+    public void ButtonSetCategory(int index)
+    {
+        if (index >= 0 && index < craftingCategories.Count)
+        {
+            currentCategoryIndex = index;
+            ButtonSetRecipe(0);
+            UpdateOptionsUI();
+        }
+    }
+    public void ButtonSetRecipe(int index)
+    {
+        if (index >= 0 && index < craftingCategories[currentCategoryIndex].recipes.Count)
+        {
+            SetCurrentRecipe(craftingCategories[currentCategoryIndex].recipes[index]);
+        }
+    }
+    void SetCurrentRecipe(CraftingRecipe recipe)
+    {
+        currentRecipe = recipe;
+        UpdateCraftingUI();
+    }
+    void UpdateCraftingUI()
+    {
+        if (currentRecipe != null)
+        {
+            currentRecipeImage.sprite = currentRecipe.resultItem.sprite;
+            currentRecipeText.text = currentRecipe.resultItem.name;
+
+            // Clear previous cost UI
+            foreach (Transform child in costContainer.transform)
+            {
+                Destroy(child.gameObject);
+            }
+
+            // Create new cost UI
+            int index = 0;
+            foreach (var item in currentRecipe.requiredItems)
+            {
+                GameObject costUI = Instantiate(craftingCostPrefab, costContainer.transform);
+                costUI.GetComponent<RectTransform>().localPosition = new Vector2(0, -25 * index);
+                costUI.GetComponentInChildren<Image>().sprite = item.sprite;
+                costUI.GetComponentInChildren<TextMeshProUGUI>().text = item.name + " " + NumOfItemsAquired(item) + "/" + item.currentAmount;
+                index++;
+            }
+        }
+    }
+    void UpdateOptionsUI()
+    {
+        // Clear previous options UI
+        foreach (Transform child in craftingOptionsContainer.transform)
+        {
+            Destroy(child.gameObject);
+        }
+
+        // Create new options UI
+        int index = 0;
+        foreach (var recipe in craftingCategories[currentCategoryIndex].recipes)
+        {
+            GameObject optionUI = Instantiate(craftingOptionsPrefab, craftingOptionsContainer.transform);
+            float width = craftingOptionsContainer.GetComponent<RectTransform>().rect.width;
+            int xPosition = index;
+            int yPosition = 0;
+            while(xPosition > width/50)
+            {
+                xPosition -= (int)(width/50);
+                yPosition += 1; 
+            }
+
+            optionUI.GetComponent<RectTransform>().localPosition = new Vector2(-(width/2) + xPosition*50, yPosition*-50);
+            optionUI.GetComponentInChildren<TextMeshProUGUI>().text = recipe.resultItem.name;
+            optionUI.transform.GetChild(0).GetComponent<Image>().sprite = recipe.resultItem.sprite;
+            int capturedIndex = index; // Capture the current index for the button callback
+            optionUI.GetComponent<Button>().onClick.AddListener(() => ButtonSetRecipe(capturedIndex));
+            index++;
+        }
+    }
+    int NumOfItemsAquired(ItemData item)
+    {
+        ItemData[] inventory = playerLogicScript.inventory;
+        int count = 0;
+        foreach (var invItem in inventory)
+        {
+            if (invItem != null && invItem.name == item.name)
+            {
+                count+=invItem.currentAmount;
+            }
+        }
+        return count;
+    }
+    public void AttemptCraft()
+    {
+        if (currentRecipe != null)
+        {
+            bool canCraft = true;
+            foreach (var item in currentRecipe.requiredItems)
+            {
+                if (NumOfItemsAquired(item) < item.currentAmount)
+                {
+                    canCraft = false;
+                    break;
+                }
+            }
+            if (canCraft)
+            {
+                // Remove required items from inventory
+                foreach (var item in currentRecipe.requiredItems)
+                {
+                    playerLogicScript.RemoveItemFromInventory(item, item.currentAmount);
+                }
+                // Add crafted item to inventory
+                playerLogicScript.AddItemToInventory(currentRecipe.resultItem);
+                UpdateCraftingUI();
+            }
+        }
+    }
+}
