@@ -52,6 +52,14 @@ public class BiomeData
     public int textureIndex;
 }
 
+[System.Serializable]
+public class SavedObjectData
+{
+    public GameObject prefab;
+    public Vector3 position;
+    public Quaternion rotation;
+}
+
 public class WorldGeneration2 : MonoBehaviour
 {
     [Header("Chunk Settings")]
@@ -115,12 +123,13 @@ public class WorldGeneration2 : MonoBehaviour
     [SerializeField] Transform player;
     [SerializeField] GameObject spawnLight;
     [SerializeField] GameObject swampParticles;
+    [SerializeField] GameObject slimeBoss;
 
     [Header("Seed Settings")]
     public int seed = 0;
 
     static private Dictionary<Vector2Int, GameObject> loadedChunks = new Dictionary<Vector2Int, GameObject>();
-    static private Dictionary<Vector2Int, List<GameObject>> chunkSavedObjects = new Dictionary<Vector2Int, List<GameObject>>();
+    static private Dictionary<Vector2Int, List<SavedObjectData>> chunkSavedObjects = new Dictionary<Vector2Int, List<SavedObjectData>>();
 
     static float baseOffsetX, baseOffsetZ;
     static float mediumOffsetX, mediumOffsetZ;
@@ -272,6 +281,7 @@ public class WorldGeneration2 : MonoBehaviour
             chunkCoord.y * chunkSize * vertexSpacing
         );
         chunkObj.transform.parent = transform;
+        chunkObj.layer = LayerMask.NameToLayer("Ground");
 
         MeshFilter mf = chunkObj.AddComponent<MeshFilter>();
         MeshRenderer mr = chunkObj.AddComponent<MeshRenderer>();
@@ -761,11 +771,11 @@ public class WorldGeneration2 : MonoBehaviour
 
     void LoadSavedObjects(Vector2Int chunkCoord, GameObject chunkObj)
     {
-        if (chunkSavedObjects.TryGetValue(chunkCoord, out List<GameObject> savedObjects))
+        if (chunkSavedObjects.TryGetValue(chunkCoord, out List<SavedObjectData> savedObjects))
         {
-            foreach (var obj in savedObjects)
+            foreach (var data in savedObjects)
             {
-                Instantiate(obj, chunkObj.transform);
+                GameObject obj = Instantiate(data.prefab, data.position, data.rotation, chunkObj.transform);
                 obj.GetComponent<ChunkSavableObject>().OnChunkLoaded();
             }
         }
@@ -775,13 +785,24 @@ public class WorldGeneration2 : MonoBehaviour
     {
         if (loadedChunks.TryGetValue(chunkCoord, out GameObject chunkObj))
         {
+            List<SavedObjectData> savedObjects = new List<SavedObjectData>();
             foreach(Transform child in chunkObj.transform)
             {
                 if(child.gameObject.GetComponent<ChunkSavableObject>() != null)
                 {
-                    child.gameObject.GetComponent<ChunkSavableObject>().OnChunkUnloaded();
+                    ChunkSavableObject savable = child.gameObject.GetComponent<ChunkSavableObject>();
+                    savable.OnChunkUnloaded();
+                    
+                    SavedObjectData data = new SavedObjectData
+                    {
+                        prefab = savable.ObjectPrefab.prefab,
+                        position = child.position,
+                        rotation = child.rotation
+                    };
+                    savedObjects.Add(data);
                 }
             }
+            chunkSavedObjects[chunkCoord] = savedObjects;
             Destroy(chunkObj);
             loadedChunks.Remove(chunkCoord);
         }
@@ -819,7 +840,7 @@ public class WorldGeneration2 : MonoBehaviour
             return; // Chunk doesn't exist, nothing to save
         }
         
-        List<GameObject> savedObjects = new List<GameObject>();
+        List<SavedObjectData> savedObjects = new List<SavedObjectData>();
         foreach(Transform child in chunkObj.transform)
         {
             // Save each child object data here
@@ -831,7 +852,13 @@ public class WorldGeneration2 : MonoBehaviour
                     Debug.LogWarning($"ChunkSavableObject on {child.gameObject.name} has no ObjectPrefab assigned. Skipping save.");
                     continue;
                 }
-                savedObjects.Add(savable.ObjectPrefab.prefab);
+                SavedObjectData data = new SavedObjectData
+                {
+                    prefab = savable.ObjectPrefab.prefab,
+                    position = child.position,
+                    rotation = child.rotation
+                };
+                savedObjects.Add(data);
             }
         }
         chunkSavedObjects[chunkCoord] = savedObjects;
