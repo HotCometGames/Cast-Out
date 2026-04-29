@@ -14,6 +14,9 @@ public class ItemData
     public Sprite sprite;
     public ChunkObjectDefinition prefabDefinition;
     public int manaCost;
+    public int currentAmount;
+    public int maxAmount;
+    public string extraTag;
 }
 public class PlayerLogicScript : MonoBehaviour
 {
@@ -23,6 +26,8 @@ public class PlayerLogicScript : MonoBehaviour
     public int selectedItem = 0;
     public GameObject[] slots;
     public GameObject[] inventorySlots;
+    public Sprite[] emptyArmorSlotSprites;
+    public Sprite normalSlotSprite;
     public GraphicRaycaster raycaster;
     public EventSystem eventSystem;
     public int slotTradeSelected = -1;
@@ -45,10 +50,11 @@ public class PlayerLogicScript : MonoBehaviour
     public TextMeshProUGUI captions;
     public GameObject inventoryUI;
     public GameObject tradeMenuUI;
-    public GameObject YukiObject;
+    public GameObject craftingMenuUI;
     public TradeMenuScript tradeMenuScript;
     public Slider manaBar;
     public Slider healthBar;
+    public GameObject[] buildables;
 
     [Header("Spells")]
     public GameObject punchPrefab;
@@ -87,19 +93,6 @@ public class PlayerLogicScript : MonoBehaviour
         UpdateHealth();
         WhatAmILookingAt();
         UpdateCreatureSpawning();
-        if (currentLookAtTag == "Yuki")
-        {
-            float a = currentLookAtObject.transform.position.x - player.position.x;
-            float b = currentLookAtObject.transform.position.z - player.position.z;
-            float c = Mathf.Sqrt(a * a + b * b);
-            float d = currentLookAtObject.transform.position.y - player.position.y;
-            float distance = Mathf.Sqrt(c * c + d * d);
-            if(distance > 15f) { return; }
-            Transform yukiTransform = currentLookAtObject.transform;
-            GameObject newYuki = Instantiate(YukiObject, yukiTransform.position, yukiTransform.rotation);
-            currentLookAtObject = newYuki;
-            Destroy(currentLookAtObject);
-        }
         //CheckForLavaAbove();
         if (!inMenu)
         {
@@ -148,6 +141,15 @@ public class PlayerLogicScript : MonoBehaviour
                     currentMenu = "";
                     UpdateHotbar();
                 }
+                else if (currentMenu == "Crafting")
+                {
+                    craftingMenuUI.SetActive(false);
+                    Cursor.lockState = CursorLockMode.Locked;
+                    playerMovement.inputEnabled = true;
+                    inMenu = false;
+                    currentMenu = "";
+                    UpdateHotbar();
+                }
             }
 
 
@@ -164,7 +166,7 @@ public class PlayerLogicScript : MonoBehaviour
 
             if (results.Count > 0)
             {
-                GameObject clickedObject = results[0].gameObject;
+                GameObject clickedObject = results[1].gameObject;
                 Debug.Log("Clicked on: " + clickedObject.name);
 
                 string slotName = clickedObject.name; // Assuming the slot GameObjects are named "Item0", "Item1", etc.
@@ -196,7 +198,26 @@ public class PlayerLogicScript : MonoBehaviour
             Debug.LogWarning("Invalid inventory indices for switching items.");
             return;
         }
-
+        if(slot1 == 27 && inventory[slot2].extraTag != "Helmet" || slot2 == 27 && inventory[slot1].extraTag != "Helmet")
+        {
+            Debug.LogWarning("You can only equip helmets in the helmet slot.");
+            return;
+        }
+        if(slot1 == 28 && inventory[slot2].extraTag != "Chestplate" || slot2 == 28 && inventory[slot1].extraTag != "Chestplate")
+        {
+            Debug.LogWarning("You can only equip chestplates in the chestplate slot.");
+            return;
+        }
+        if(slot1 == 29 && inventory[slot2].extraTag != "Leggings" || slot2 == 29 && inventory[slot1].extraTag != "Leggings")
+        {
+            Debug.LogWarning("You can only equip leggings in the leggings slot.");
+            return;
+        }
+        if(slot1 == 30 && inventory[slot2].extraTag != "Boots" || slot2 == 30 && inventory[slot1].extraTag != "Boots")
+        {
+            Debug.LogWarning("You can only equip boots in the boots slot.");
+            return;
+        }
         ItemData temp = inventory[slot1];
         inventory[slot1] = inventory[slot2];
         inventory[slot2] = temp;
@@ -230,19 +251,21 @@ public class PlayerLogicScript : MonoBehaviour
                     ItemData itemPickup = currentLookAtObject.GetComponent<ItemPickup>()?.itemData;
                     if (itemPickup != null)
                     {
-                        // Find the first empty slot in the inventory
-                        for (int i = 0; i < inventory.Length; i++)
-                        {
-                            if (inventory[i] == null || inventory[i].name == null || inventory[i].name == "")
-                            {
-                                inventory[i] = itemPickup;
-                                Debug.Log($"Picked up item: {itemPickup.name}");
-                                UpdateHotbar();
-                                Destroy(currentLookAtObject);
-                                break;
-                            }
-                        }
+                        AddItemToInventory(itemPickup);
+                        Destroy(currentLookAtObject);
+                        currentLookAt = "";
+                        currentLookAtTag = "";
+                        currentLookAtObject = null;
                     }
+                    ItemHoldingUIScript.PlayUseAnimation();
+                    return;
+                case "WorkBench":
+                    // Open crafting menu
+                    Debug.Log("Opening crafting menu...");
+                    currentMenu = "Crafting";
+                    Cursor.lockState = CursorLockMode.None;
+                    playerMovement.inputEnabled = false;
+                    craftingMenuUI.SetActive(true);
                     ItemHoldingUIScript.PlayUseAnimation();
                     return;
                 default:
@@ -251,21 +274,39 @@ public class PlayerLogicScript : MonoBehaviour
             switch(inventory[item].name)
             {
                 case "Mana Berry":
-                Debug.Log("Consuming Mana Berry...");
-                mana += 20;
-                if (mana > maxMana) { mana = maxMana; }
-                manaBar.value = mana;
-                inventory[item] = null;
-                UpdateHotbar();
-                break;
+                    Debug.Log("Consuming Mana Berry...");
+                    mana += 20;
+                    if (mana > maxMana) { mana = maxMana; }
+                    manaBar.value = mana;
+                    if(inventory[item].currentAmount > 1)
+                    {
+                        inventory[item].currentAmount -= 1;
+                    } else {
+                        inventory[item] = new ItemData();
+                    }
+                    UpdateHotbar();
+                    break;
                 case "Bread":
-                Debug.Log("Consuming Bread...");
-                entityStats.currentHealth += 20;
-                if (entityStats.currentHealth > entityStats.maxHealth) { entityStats.currentHealth = entityStats.maxHealth; }
-                healthBar.value = entityStats.currentHealth;
-                inventory[item] = null;
-                UpdateHotbar();
-                break;
+                    Debug.Log("Consuming Bread...");
+                    entityStats.currentHealth += 20;
+                    if (entityStats.currentHealth > entityStats.maxHealth) { entityStats.currentHealth = entityStats.maxHealth; }
+                    healthBar.value = entityStats.currentHealth;
+                    if(inventory[item].currentAmount > 1)
+                    {
+                        inventory[item].currentAmount -= 1;
+                    } else {
+                        inventory[item] = new ItemData();
+                    }
+                    UpdateHotbar();
+                    break;
+                case "Work Bench":
+                    Vector3 placePosition = player.position + player.forward * 2f;
+                    float heightAtPosition = WorldGeneration2.GetHeight(placePosition.x, placePosition.z);
+                    placePosition.y = heightAtPosition+1;
+                    Instantiate(buildables[0], placePosition, Quaternion.identity);
+                    inventory[item] = new ItemData();
+                    UpdateHotbar();
+                    return;
                 default:
                     Debug.Log("Right click has no effect with this item.");
                     return;
@@ -347,16 +388,10 @@ public class PlayerLogicScript : MonoBehaviour
                     }
                     for (int i = 0; i < inventory.Length; i++)
                     {
-                        if (inventory[i] != null && inventory[i].name != "")
+                        if (NumOfItemsAquired(orbToLookFor) > 0)
                         {
-                            if (inventory[i].name == orbToLookFor)
-                            {
-                                inventory[i] = null;
-                                Debug.Log("Enchanting Stick...");
-                                inventory[item] = wandToLookFor;
-                                UpdateHotbar();
-                                break;
-                            }
+                            RemoveItemFromInventory(wandToLookFor, 1);
+                            AddItemToInventory(wandToLookFor);
                         }
                     }
                     
@@ -368,29 +403,24 @@ public class PlayerLogicScript : MonoBehaviour
                 }
                 break;
             case "Rock":
-                if(currentLookAtTag == "Crystal")
+                if(currentLookAtTag == "Ore")
                 {
-                    Debug.Log("Mining Crystal...");
+                    Debug.Log("Mining Ore...");
                     ItemData itemPickup = currentLookAtObject.GetComponent<ItemPickup>()?.itemData;
                     // Find the first empty slot in the inventory
-                    for (int j = 0; j < inventory.Length; j++)
-                    {
-                        if (inventory[j] == null || inventory[j].name == null || inventory[j].name == "")
-                        {
-                            inventory[j] = itemPickup;
-                            Debug.Log($"Mined up item: {itemPickup.name}");
-                            Destroy(currentLookAtObject);
-                            UpdateHotbar();
-                            break;
-                        }
-                    }
-                    UpdateHotbar();
+                    AddItemToInventory(itemPickup);
+                    Destroy(currentLookAtObject);
                 } else
                 {
                     GameObject punch1 = Instantiate(punchPrefab, player.position + cameraTransform.forward * 2f, cameraTransform.rotation);
                     punch1.GetComponent<AttackScript>().owner = this.gameObject;
                     Debug.Log("Punching...");
                 }
+                break;
+            case "Hammer":
+                GameObject hammer = Instantiate(punchPrefab, player.position + cameraTransform.forward * 2f, cameraTransform.rotation);
+                hammer.GetComponent<AttackScript>().owner = this.gameObject;
+                hammer.GetComponent<AttackScript>().damage = 20f;
                 break;
             default:
                 GameObject punch = Instantiate(punchPrefab, player.position + cameraTransform.forward * 2f, cameraTransform.rotation);
@@ -402,6 +432,30 @@ public class PlayerLogicScript : MonoBehaviour
         manaBar.value = mana;
         ItemHoldingUIScript.PlayUseAnimation();
     }
+    int NumOfItemsAquired(ItemData item)
+    {
+        int count = 0;
+        foreach (var invItem in inventory)
+        {
+            if (invItem != null && invItem.name == item.name)
+            {
+                count+=invItem.currentAmount;
+            }
+        }
+        return count;
+    }
+    int NumOfItemsAquired(String item)
+    {
+        int count = 0;
+        foreach (var invItem in inventory)
+        {
+            if (invItem != null && invItem.name == item)
+            {
+                count+=invItem.currentAmount;
+            }
+        }
+        return count;
+    }
 
     public void UpdateHotbar()
     {
@@ -412,6 +466,8 @@ public class PlayerLogicScript : MonoBehaviour
             if (inventory[i] == null || string.IsNullOrEmpty(inventory[i].name))
             {
                 // Make transparent
+                slotImage.sprite = normalSlotSprite;
+                
                 Color c = slotImage.color;
                 c.a = 0f;
                 slotImage.color = c;
@@ -419,6 +475,9 @@ public class PlayerLogicScript : MonoBehaviour
                 {
                     ItemHoldingUIScript.ClearSprite();
                 }
+                TextMeshProUGUI amountText = slots[i].transform.parent.GetComponentInChildren<TextMeshProUGUI>();
+                amountText.text = "";
+
                 continue;
             }
 
@@ -431,6 +490,17 @@ public class PlayerLogicScript : MonoBehaviour
             else
             {
                 Debug.LogWarning($"No sprite found for item {inventory[i]}");
+            }
+
+            // Add Number of items text
+            TextMeshProUGUI amountText1 = slots[i].transform.parent.GetComponentInChildren<TextMeshProUGUI>();
+            if (inventory[i].currentAmount > 1)
+            {
+                amountText1.text = inventory[i].currentAmount.ToString();
+            }
+            else
+            {
+                amountText1.text = "";
             }
 
             // Ensure visible
@@ -458,10 +528,22 @@ public class PlayerLogicScript : MonoBehaviour
             if (inventory[j] == null || string.IsNullOrEmpty(inventory[j].name))
             {
                 // Make transparent
-                Color c = slotImage.color;
-                c.a = 0f;
-                slotImage.color = c;
-                continue;
+                if(i == 20 || i == 21 || i == 22 || i == 23)
+                {
+                    Color visible1 = slotImage.color;
+                    visible1.a = 1f;
+                    slotImage.color = visible1;
+                    slotImage.sprite = emptyArmorSlotSprites[i - 20];
+                } else
+                {
+                    Color c = slotImage.color;
+                    c.a = 0f;
+                    slotImage.color = c;
+                    TextMeshProUGUI amountText = inventorySlots[i].transform.parent.GetComponentInChildren<TextMeshProUGUI>();
+                    amountText.text = "";
+                    continue;
+                }
+                
             }
 
             Debug.Log($"Updating inventory slot {i} with item {inventory[j]}");
@@ -475,6 +557,20 @@ public class PlayerLogicScript : MonoBehaviour
                 Debug.LogWarning($"No sprite found for item {inventory[j]}");
             }
 
+            // Add Number of items text
+            if(i < 20)
+            {
+                TextMeshProUGUI amountText1 = inventorySlots[i].transform.parent.GetComponentInChildren<TextMeshProUGUI>();
+                if (inventory[j].currentAmount > 1)
+                {
+                    amountText1.text = inventory[j].currentAmount.ToString();
+                }
+                else
+                {
+                    amountText1.text = "";
+                }
+            }
+
             // Ensure visible
             Color visible = slotImage.color;
             visible.a = 1f;
@@ -482,7 +578,105 @@ public class PlayerLogicScript : MonoBehaviour
         }
     }
 
-
+    public void RemoveItemFromInventory(ItemData itemName, int amount)
+    {
+        int amountToRemove = amount;
+        for (int i = 0; i < inventory.Length; i++)
+        {
+            if (inventory[i] != null && inventory[i].name == itemName.name)
+            {
+                if (inventory[i].currentAmount > amountToRemove)
+                {
+                    inventory[i].currentAmount -= amountToRemove;
+                    break;
+                }
+                else
+                {
+                    amountToRemove -= inventory[i].currentAmount;
+                    inventory[i] = new ItemData();
+                }
+            }
+        }
+        UpdateHotbar();
+    }
+    public void AddItemToInventory(ItemData itemToAdd)
+    {
+        int amountToAdd = itemToAdd.currentAmount;
+        for (int i = 0; i < inventory.Length; i++)
+        {
+            if (inventory[i] != null && inventory[i].name == itemToAdd.name && inventory[i].currentAmount < inventory[i].maxAmount)
+            {
+                int spaceLeft = inventory[i].maxAmount - inventory[i].currentAmount;
+                if (amountToAdd <= spaceLeft)
+                {
+                    inventory[i].currentAmount += amountToAdd;
+                    amountToAdd = 0;
+                    break;
+                }
+                else
+                {
+                    inventory[i].currentAmount += spaceLeft;
+                    amountToAdd -= spaceLeft;
+                }
+            }
+        }
+        for (int i = 0; i < inventory.Length; i++)
+        {
+            if ((inventory[i] == null || inventory[i].name == null || inventory[i].name == "") && amountToAdd > 0)
+            {
+                if (amountToAdd <= itemToAdd.maxAmount)
+                {
+                    ItemData newItem = new ItemData
+                    {
+                        name = itemToAdd.name,
+                        sprite = itemToAdd.sprite,
+                        prefabDefinition = itemToAdd.prefabDefinition,
+                        manaCost = itemToAdd.manaCost,
+                        currentAmount = amountToAdd,
+                        maxAmount = itemToAdd.maxAmount,
+                        extraTag = itemToAdd.extraTag
+                    };
+                    inventory[i] = newItem;
+                    amountToAdd = 0;
+                    break;
+                }
+                else
+                {
+                    ItemData newItem = new ItemData
+                    {
+                        name = itemToAdd.name,
+                        sprite = itemToAdd.sprite,
+                        prefabDefinition = itemToAdd.prefabDefinition,
+                        manaCost = itemToAdd.manaCost,
+                        currentAmount = itemToAdd.maxAmount,
+                        maxAmount = itemToAdd.maxAmount,
+                        extraTag = itemToAdd.extraTag
+                    };
+                    inventory[i] = newItem;
+                    amountToAdd -= itemToAdd.maxAmount;
+                }
+            }
+        }
+        if (amountToAdd > 0)
+        {
+            Debug.LogWarning($"Not enough space in inventory to add {amountToAdd} of {itemToAdd.name}");
+            ItemData newItem = new ItemData
+            {
+                name = itemToAdd.name,
+                sprite = itemToAdd.sprite,
+                prefabDefinition = itemToAdd.prefabDefinition,
+                manaCost = itemToAdd.manaCost,
+                currentAmount = amountToAdd,
+                maxAmount = itemToAdd.maxAmount,
+                extraTag = itemToAdd.extraTag
+            };
+            // Drop Items on the ground
+            Vector3 dropPosition = player.position + player.forward * 2f;
+            GameObject droppedItem = Instantiate(newItem.prefabDefinition.prefab, dropPosition, Quaternion.identity);
+            droppedItem.GetComponent<ItemPickup>().itemData = newItem;
+        }
+        UpdateHotbar();
+    }
     void DropItem(int item)
     {
         if (inventory[item] == null || inventory[item].name == null || inventory[item].name == "")
@@ -498,7 +692,12 @@ public class PlayerLogicScript : MonoBehaviour
             Instantiate(inventory[item].prefabDefinition.prefab, dropPosition, Quaternion.identity);
             Debug.Log($"Dropped item: {inventory[item].name}");
             // Remove the item from the inventory
-            inventory[item] = new ItemData();
+            if(inventory[item].currentAmount > 1)
+            {
+                inventory[item].currentAmount -= 1;
+            } else {
+                inventory[item] = new ItemData();
+            }
             UpdateHotbar();
         }
         else
@@ -514,10 +713,10 @@ public class PlayerLogicScript : MonoBehaviour
         {
             switch (hit.collider.tag)
             {
-                case "Crystal":
+                case "Ore":
                     AttemptToSetText("Left Click with a Rock Item to Mine it");
                     currentLookAt = hit.collider.gameObject.GetComponent<ItemPickup>().itemData.name;
-                    currentLookAtTag = "Crystal";
+                    currentLookAtTag = "Ore";
                     currentLookAtObject = hit.collider.gameObject;
                     break;
                 case "Well":
@@ -538,9 +737,10 @@ public class PlayerLogicScript : MonoBehaviour
                     currentLookAtTag = "Orc";
                     currentLookAtObject = hit.collider.gameObject;
                     break;
-                case "Yuki":
-                    currentLookAt = "Yuki";
-                    currentLookAtTag = "Yuki";
+                case "WorkBench":
+                    AttemptToSetText("A Work Bench. Right Click to Craft.");
+                    currentLookAt = "Work Bench";
+                    currentLookAtTag = "WorkBench";
                     currentLookAtObject = hit.collider.gameObject;
                     break;
                 default:
