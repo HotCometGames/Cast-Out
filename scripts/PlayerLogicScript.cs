@@ -51,6 +51,7 @@ public class PlayerLogicScript : MonoBehaviour
     public GameObject inventoryUI;
     public GameObject tradeMenuUI;
     public GameObject craftingMenuUI;
+    public GameObject anvilUI;
     public TradeMenuScript tradeMenuScript;
     public Slider manaBar;
     public Slider healthBar;
@@ -120,41 +121,50 @@ public class PlayerLogicScript : MonoBehaviour
             }
         }
         if (Input.GetKeyDown(KeyCode.E))
+        {
+            if (currentMenu == "Inventory" || currentMenu == "")
             {
-                if (currentMenu == "Inventory" || currentMenu == "")
-                {
-                    inventoryUI.SetActive(!inventoryUI.activeSelf);
-                    Cursor.lockState = inventoryUI.activeSelf ? CursorLockMode.None : CursorLockMode.Locked;
-                    playerMovement.inputEnabled = !inventoryUI.activeSelf;
-                    inMenu = inventoryUI.activeSelf;
-                    slotTradeSelected = -1;
-                    currentMenu = inventoryUI.activeSelf ? "Inventory" : "";
-                    UpdateHotbar();
-                }
-                else if (currentMenu == "Trade")
-                {
-                    tradeMenuUI.SetActive(false);
-                    Cursor.lockState = CursorLockMode.Locked;
-                    playerMovement.inputEnabled = true;
-                    inMenu = false;
-                    slotTradeSelected = -1;
-                    currentMenu = "";
-                    UpdateHotbar();
-                }
-                else if (currentMenu == "Crafting")
-                {
-                    craftingMenuUI.SetActive(false);
-                    Cursor.lockState = CursorLockMode.Locked;
-                    playerMovement.inputEnabled = true;
-                    inMenu = false;
-                    currentMenu = "";
-                    UpdateHotbar();
-                }
+                inventoryUI.SetActive(!inventoryUI.activeSelf);
+                Cursor.lockState = inventoryUI.activeSelf ? CursorLockMode.None : CursorLockMode.Locked;
+                playerMovement.inputEnabled = !inventoryUI.activeSelf;
+                inMenu = inventoryUI.activeSelf;
+                slotTradeSelected = -1;
+                currentMenu = inventoryUI.activeSelf ? "Inventory" : "";
+                UpdateHotbar();
             }
+            else if (currentMenu == "Trade")
+            {
+                tradeMenuUI.SetActive(false);
+                Cursor.lockState = CursorLockMode.Locked;
+                playerMovement.inputEnabled = true;
+                inMenu = false;
+                slotTradeSelected = -1;
+                currentMenu = "";
+                UpdateHotbar();
+            }
+            else if (currentMenu == "Crafting")
+            {
+                craftingMenuUI.SetActive(false);
+                Cursor.lockState = CursorLockMode.Locked;
+                playerMovement.inputEnabled = true;
+                inMenu = false;
+                currentMenu = "";
+                UpdateHotbar();
+            } else if (currentMenu == "Anvil")
+            {
+                anvilUI.SetActive(false);
+                Cursor.lockState = CursorLockMode.Locked;
+                playerMovement.inputEnabled = true;
+                inMenu = false;
+                currentMenu = "";
+                UpdateHotbar();
+            }
+        }
 
 
         if (Input.GetMouseButtonDown(0) && inventoryUI.activeSelf) // left click
         {
+            Debug.Log("Left Click Detected on Inventory UI");
             PointerEventData pointerData = new PointerEventData(eventSystem)
             {
                 position = Input.mousePosition
@@ -163,6 +173,7 @@ public class PlayerLogicScript : MonoBehaviour
             // Raycast UI
             List<RaycastResult> results = new List<RaycastResult>();
             raycaster.Raycast(pointerData, results);
+            Debug.Log(results.Count);
 
             if (results.Count > 0)
             {
@@ -170,6 +181,7 @@ public class PlayerLogicScript : MonoBehaviour
                 Debug.Log("Clicked on: " + clickedObject.name);
 
                 string slotName = clickedObject.name; // Assuming the slot GameObjects are named "Item0", "Item1", etc.
+                Debug.Log("Clicked slot name: " + slotName);
                 if (slotName.StartsWith("Item"))
                 {
                     int slotIndex;
@@ -268,6 +280,15 @@ public class PlayerLogicScript : MonoBehaviour
                     craftingMenuUI.SetActive(true);
                     ItemHoldingUIScript.PlayUseAnimation();
                     return;
+                case "Anvil":
+                    // Open anvil menu
+                    Debug.Log("Opening anvil menu...");
+                    currentMenu = "Anvil";
+                    Cursor.lockState = CursorLockMode.None;
+                    playerMovement.inputEnabled = false;
+                    anvilUI.SetActive(true);
+                    ItemHoldingUIScript.PlayUseAnimation();
+                    return;
                 default:
                     break;
             }
@@ -304,6 +325,14 @@ public class PlayerLogicScript : MonoBehaviour
                     float heightAtPosition = WorldGeneration2.GetHeight(placePosition.x, placePosition.z);
                     placePosition.y = heightAtPosition+1;
                     Instantiate(buildables[0], placePosition, Quaternion.identity);
+                    inventory[item] = new ItemData();
+                    UpdateHotbar();
+                    return;
+                case "Anvil":
+                    Vector3 placePosition1 = player.position + player.forward * 2f;
+                    float heightAtPosition1 = WorldGeneration2.GetHeight(placePosition1.x, placePosition1.z);
+                    placePosition1.y = heightAtPosition1+1;
+                    Instantiate(buildables[1], placePosition1, Quaternion.identity);
                     inventory[item] = new ItemData();
                     UpdateHotbar();
                     return;
@@ -390,7 +419,8 @@ public class PlayerLogicScript : MonoBehaviour
                     {
                         if (NumOfItemsAquired(orbToLookFor) > 0)
                         {
-                            RemoveItemFromInventory(wandToLookFor, 1);
+                            RemoveItemFromInventory(orbToLookFor, 1);
+                            RemoveItemFromInventory("Stick", 1);
                             AddItemToInventory(wandToLookFor);
                         }
                     }
@@ -444,6 +474,7 @@ public class PlayerLogicScript : MonoBehaviour
         }
         return count;
     }
+
     int NumOfItemsAquired(String item)
     {
         int count = 0;
@@ -578,12 +609,12 @@ public class PlayerLogicScript : MonoBehaviour
         }
     }
 
-    public void RemoveItemFromInventory(ItemData itemName, int amount)
+    public void RemoveItemFromInventory(String itemName, int amount)
     {
         int amountToRemove = amount;
         for (int i = 0; i < inventory.Length; i++)
         {
-            if (inventory[i] != null && inventory[i].name == itemName.name)
+            if (inventory[i] != null && inventory[i].name == itemName)
             {
                 if (inventory[i].currentAmount > amountToRemove)
                 {
@@ -743,7 +774,17 @@ public class PlayerLogicScript : MonoBehaviour
                     currentLookAtTag = "WorkBench";
                     currentLookAtObject = hit.collider.gameObject;
                     break;
+                case "Anvil":
+                    AttemptToSetText("An Anvil. Right Click to Forge.");
+                    currentLookAt = "Anvil";
+                    currentLookAtTag = "Anvil";
+                    currentLookAtObject = hit.collider.gameObject;
+                    break;
                 default:
+                    AttemptToSetText("");
+                    currentLookAt = "";
+                    currentLookAtTag = "";
+                    currentLookAtObject = null;
                     break;
             }
         }
