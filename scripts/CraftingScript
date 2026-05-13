@@ -153,7 +153,7 @@ public class CraftingScript : MonoBehaviour
                 // Remove required items from inventory
                 foreach (var item in currentRecipe.requiredItems)
                 {
-                    playerLogicScript.RemoveItemFromInventory(item, item.currentAmount);
+                    playerLogicScript.RemoveItemFromInventory(item.name, item.currentAmount);
                 }
                 // Add crafted item to inventory
                 playerLogicScript.AddItemToInventory(currentRecipe.resultItem);
