@@ -19,3 +19,6 @@ Its been a while since I wrote one of these, I have been updating the game slowl
 
 March 28, 2026
 Its been even longer since ive written in this. School got busy for a little bit, but thats okay because Im back! I added crafting into the game, along with ores to create tools and weapons. I added a system for stacking items, reorganized the inventory, making room for the crafting system.
+
+June 12, 2026
+The last couple of weeks, I have added new wands like the ice and ground wands, along with giving all of the wands spells to cast. I also added a respawn mechanic, and tweaked some small bugs. Tiktok has been going great, I have gotten over 700k+ views on my most recent post. I set up the itch.io page: https://hot-comet.itch.io/cast-out and hopefully i can release a working demo by the end of this week.
