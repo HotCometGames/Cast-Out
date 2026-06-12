@@ -27,7 +27,7 @@ public class BiomeSkyboxController : MonoBehaviour
         {
         new SkyboxData { skyColor = new Color(0.2f, 0.4f, 0.6f), fogColor = new Color(0.3f, 0.5f, 0.7f), cloudColor = new Color(0.8f, 0.8f, 0.8f), cloudAmount = 0.737f }, // WaterRocks
         new SkyboxData { skyColor = new Color(0.1f, 0.3f, 0.5f), fogColor = new Color(0.2f, 0.4f, 0.6f), cloudColor = new Color(0.7f, 0.7f, 0.7f), cloudAmount = 0.737f }, // Ocean
-        new SkyboxData { skyColor = new Color(0.94f, 0.39f, 0.31f), fogColor = new Color(0.84f, 0.6f, 0.22f), cloudColor = new Color(1f, 1f, 1f), cloudAmount = 0.737f }, // Plains
+        new SkyboxData { skyColor = new Color(0.5f, 0.7f, 1f), fogColor = new Color(0.6f, 0.8f, 1f), cloudColor = new Color(1f, 1f, 1f), cloudAmount = 0.737f }, // Plains
         new SkyboxData { skyColor = new Color(0.4f, 0.6f, 0.8f), fogColor = new Color(0.5f, 0.7f, 0.9f), cloudColor = new Color(0.9f, 0.9f, 0.9f), cloudAmount = 0.737f }, // Taiga
         new SkyboxData { skyColor = new Color(0.31f, 0.5f, 0.79f), fogColor = new Color(0.48f, 0.57f, 0.67f), cloudColor = new Color(0.85f, 0.85f, 0.85f), cloudAmount = 0.737f }, // Mountain
         new SkyboxData { skyColor = new Color(1f, 0.4f, 0.2f), fogColor = new Color(1f, 0.5f, 0.3f), cloudColor = new Color(1f, 0.7f, 0.5f), cloudAmount = .737f }, // LavaCast
