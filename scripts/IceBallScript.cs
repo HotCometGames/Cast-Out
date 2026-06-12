@@ -23,5 +23,9 @@ public class IceBallScript : MonoBehaviour
             freezeEffect.ApplyEffect();
             Destroy(gameObject);
         }
+        if(other.gameObject.layer == LayerMask.NameToLayer("Ground"))
+        {
+            Destroy(gameObject);
+        }
     }
 }
