@@ -21,7 +21,7 @@ public class ItemData
 public class PlayerLogicScript : MonoBehaviour
 {
     [Header("Inventory Settings")]
-    public ItemData[] inventory = new ItemData[7];
+    public ItemData[] inventory = new ItemData[7]; // <<<<<
     public ItemData[] wands = new ItemData[2];
     public int selectedItem = 0;
     public GameObject[] slots;
@@ -33,12 +33,11 @@ public class PlayerLogicScript : MonoBehaviour
     public int slotTradeSelected = -1;
     public bool inMenu = false;
     [Header("Player Stats")]
-    public EntityStatHandler entityStats;
+    public EntityStatHandler entityStats; // <<<<<<<<
     //Eventually delete these and use entityStatHandler instead, also start using damage multipliers from it, in the attack area.
-    public int mana = 50;
-    public int maxMana = 50;
+    public int mana = 50; // <<<<<<<
+    public int maxMana = 50; // <<<<<
     public float maxSpellDistance = 10f;
-    public int gold = 0;
     public float damageCooldown = .5f;
     private float lastDamageTimer = 0f;
 
@@ -49,6 +48,7 @@ public class PlayerLogicScript : MonoBehaviour
     public Transform cameraTransform;
     public TextMeshProUGUI captions;
     public GameObject inventoryUI;
+    public GameObject deathUI;
     public GameObject tradeMenuUI;
     public GameObject craftingMenuUI;
     public GameObject anvilUI;
@@ -61,6 +61,9 @@ public class PlayerLogicScript : MonoBehaviour
     public GameObject punchPrefab;
     public GameObject plantPrefab;
     public GameObject fireballPrefab;
+    public GameObject darkSpellPrefab;
+    public GameObject groundSpellPrefab;
+    public GameObject iceSpellPrefab;
 
     [Header("Creatures")]
     public float creatureSpawnMaxDistance = 100f;
@@ -373,6 +376,9 @@ public class PlayerLogicScript : MonoBehaviour
             }
         }
 
+        Vector3 normal = hit.normal;
+        Quaternion rotation = Quaternion.LookRotation(normal);
+
 
         Debug.Log($"Using item: {item}");
         // Implement item usage logic here
@@ -390,7 +396,28 @@ public class PlayerLogicScript : MonoBehaviour
                 // Cast a nature spell
                 Debug.Log("Casting nature spell...");
                 if (hitPoint == new Vector3()) { return; }
-                Instantiate(plantPrefab, hitPoint, Quaternion.identity);
+                GameObject plant = Instantiate(plantPrefab, hitPoint, Quaternion.identity);
+                plant.GetComponent<AttackScript>().owner = this.gameObject;
+                break;
+            case "Ground Wand":
+                // Cast a ground spell
+                Debug.Log("Casting ground spell...");
+                if (hitPoint == new Vector3()) { return; }
+                GameObject groundSpell = Instantiate(groundSpellPrefab, hitPoint, Quaternion.identity);
+                groundSpell.GetComponent<AttackScript>().owner = this.gameObject;
+                break;
+            case "Dark Wand":
+                // Cast a dark spell
+                Debug.Log("Casting dark spell...");
+                GameObject darkball = Instantiate(darkSpellPrefab, playerCamera.transform.position + playerCamera.transform.forward, cameraTransform.rotation);
+                darkball.GetComponent<DarkBallScript>().speed = 50f;
+                darkball.GetComponent<AttackScript>().owner = this.gameObject;
+                break;
+                case "Ice Wand":
+                // Cast a ice spell
+                Debug.Log("Casting ice spell...");
+                GameObject iceShell = Instantiate(iceSpellPrefab, playerCamera.transform.position - new Vector3(0.25f, 2f, .5f), Quaternion.identity);
+                iceShell.GetComponent<AttackScript>().owner = this.gameObject;
                 break;
             case "Stick":
                 if(currentLookAtTag == "Well")
@@ -404,12 +431,20 @@ public class PlayerLogicScript : MonoBehaviour
                             wandToLookFor = wands[0];
                             break;
                         case "DarkWell(Clone)":
-                            orbToLookFor = "Dark CrystalOrb";
+                            orbToLookFor = "Dark Crystal Orb";
                             wandToLookFor = wands[1];
                             break;
                         case "FireWell(Clone)":
                             orbToLookFor = "Fire Crystal Orb";
                             wandToLookFor = wands[2];
+                            break;
+                        case "IceWell(Clone)":
+                            orbToLookFor = "Ice Crystal Orb";
+                            wandToLookFor = wands[3];
+                            break;
+                        case "GroundWell(Clone)":
+                            orbToLookFor = "Ground Crystal Orb";
+                            wandToLookFor = wands[4];
                             break;
                         default:
                             orbToLookFor = "Light Crystal Orb";
@@ -439,6 +474,7 @@ public class PlayerLogicScript : MonoBehaviour
                     ItemData itemPickup = currentLookAtObject.GetComponent<ItemPickup>()?.itemData;
                     // Find the first empty slot in the inventory
                     AddItemToInventory(itemPickup);
+                    WorldGeneration2.SetVegetationExists(new Vector2(currentLookAtObject.transform.position.x, currentLookAtObject.transform.position.z), false);
                     Destroy(currentLookAtObject);
                 } else
                 {
@@ -929,11 +965,39 @@ public class PlayerLogicScript : MonoBehaviour
         if (entityStats.currentHealth < 0) { entityStats.currentHealth = 0; }
         healthBar.value = entityStats.currentHealth;
         StartCoroutine(FlashOnDamage(Color.red, 0.2f));
-        if (entityStats.currentHealth == 0)
+        if (entityStats.currentHealth <= 0)
         {
-            // Handle player death
-            Debug.Log("Player has died.");
+            Die();
         }
+    }
+
+    void Die()
+    {
+        // Handle player death
+        Debug.Log("Player has died.");
+        // Add any additional death handling logic here
+        deathUI.SetActive(true);
+        Cursor.lockState = CursorLockMode.None;
+        playerMovement.inputEnabled = false;
+        inMenu = true;
+        slotTradeSelected = -1;
+        currentMenu = "Death";
+        UpdateHotbar();
+    }
+
+    public void Respawn()
+    {
+        // Handle player respawn
+        Debug.Log("Player has respawned.");
+        entityStats.currentHealth = entityStats.maxHealth;
+        healthBar.value = entityStats.currentHealth;
+        player.position = WorldGeneration2.spawnPoint; // Respawn at origin, change as needed
+        deathUI.SetActive(false);
+        Cursor.lockState = CursorLockMode.Locked;
+        playerMovement.inputEnabled = true;
+        inMenu = false;
+        currentMenu = "";
+        UpdateHotbar();
     }
 
     void UpdateHealth()
