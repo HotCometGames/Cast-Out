@@ -21,7 +21,6 @@ public class PlayerMovement : MonoBehaviour
 
     private Rigidbody rb;
     private float xRotation = 0f;
-    private bool isGrounded = false;
 
     void Awake()
     {
@@ -66,9 +65,10 @@ public class PlayerMovement : MonoBehaviour
             ItemHoldingUIScript.SetSpeed(currentSpeed / (entityStats.currentSpeed * debugAppliedMultiplier));
 
             // Jumping
-            if (isGrounded && Input.GetButtonDown("Jump"))
+            if (isGroundedCheck() && Input.GetButton("Jump"))
             {
-                rb.AddForce(Vector3.up * moveToJumpRatio * entityStats.currentSpeed, ForceMode.Impulse);
+                rb.velocity = new Vector3(rb.velocity.x, jumpForce, rb.velocity.z); // Reset vertical velocity
+                //rb.AddForce(Vector3.up * moveToJumpRatio * entityStats.maxSpeed, ForceMode.Impulse);
             }
         } else
         {
@@ -83,13 +83,10 @@ public class PlayerMovement : MonoBehaviour
 
     void OnCollisionStay(Collision collision)
     {
-        bool foundGround = false;
         foreach (ContactPoint contact in collision.contacts)
         {
             if (contact.normal.y > 0.5f)
             {
-                isGrounded = true;
-                foundGround = true;
                 break;
             }
             else if (contact.normal.y > 0.1f && contact.normal.y <= 0.5f)
@@ -99,14 +96,11 @@ public class PlayerMovement : MonoBehaviour
                 rb.velocity = slideDir * 0.5f; // Reduce speed when sliding
             }
         }
-        if (!foundGround)
-            isGrounded = false;
     }
 
-
-    void OnCollisionExit(Collision collision)
+    bool isGroundedCheck()
     {
-        isGrounded = false;
+        return Physics.Raycast(transform.position, Vector3.down, 1.6f);
     }
 
     void CHECKFORDEBUG()
