@@ -36,6 +36,7 @@ Shader "Custom/BiomeBlendShaderURP"
             TEXTURE2D(_LavaCastTex);    SAMPLER(sampler_LavaCastTex);
             TEXTURE2D(_TundraTex);      SAMPLER(sampler_TundraTex);
             TEXTURE2D(_DesertTex);      SAMPLER(sampler_DesertTex);
+            TEXTURE2D(_ToxicSwampTex);   SAMPLER(sampler_ToxicSwampTex);
 
             struct Attributes
             {
@@ -81,6 +82,8 @@ Shader "Custom/BiomeBlendShaderURP"
                     col = SAMPLE_TEXTURE2D(_TundraTex, sampler_TundraTex, IN.uv).rgb;
                 else if (biomeIndex == 7) // Desert
                     col = SAMPLE_TEXTURE2D(_DesertTex, sampler_DesertTex, IN.uv).rgb;
+                else if (biomeIndex == 8) // ToxicSwamp
+                    col = SAMPLE_TEXTURE2D(_ToxicSwampTex, sampler_ToxicSwampTex, IN.uv).rgb;
                 else
                     col = SAMPLE_TEXTURE2D(_PlainsTex, sampler_PlainsTex, IN.uv).rgb; // Fallback
 
