@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+//using System.Numerics;
 using System.Security;
 using UnityEngine;
 
@@ -126,10 +127,11 @@ public class WorldGeneration2 : MonoBehaviour
     [SerializeField] GameObject slimeBoss;
 
     [Header("Seed Settings")]
-    public int seed = 0;
+    public int seed = 0;     // <<<<<
 
     static private Dictionary<Vector2Int, GameObject> loadedChunks = new Dictionary<Vector2Int, GameObject>();
-    static private Dictionary<Vector2Int, List<SavedObjectData>> chunkSavedObjects = new Dictionary<Vector2Int, List<SavedObjectData>>();
+    static private Dictionary<Vector2Int, List<SavedObjectData>> chunkSavedObjects = new Dictionary<Vector2Int, List<SavedObjectData>>(); // <<<<
+    static private Dictionary<Vector2, bool> vegetationExists = new Dictionary<Vector2, bool>(); // <<<<<
 
     static float baseOffsetX, baseOffsetZ;
     static float mediumOffsetX, mediumOffsetZ;
@@ -141,6 +143,8 @@ public class WorldGeneration2 : MonoBehaviour
     static float structureOffsetX, structureOffsetZ;
     static float mobOffsetX, mobOffsetZ;
     private bool setOffsets = false;
+
+    public static Vector3 spawnPoint;
 
     void Awake()
     {
@@ -565,12 +569,26 @@ public class WorldGeneration2 : MonoBehaviour
         {
             Vector3 pos = chunkObj.transform.position + vertices[tree.index];
             GameObject prefabToSpawn = tree.biomeData.natureDatas[tree.natureDataIndex].treePrefab;
+            
 
-            if (prefabToSpawn != null)
+            if (prefabToSpawn != null && CheckIfVegetationExists(new Vector2(pos.x, pos.z)))
             {
                 Instantiate(prefabToSpawn, pos, prefabToSpawn.transform.rotation, chunkObj.transform);
             }
         }
+    }
+
+    bool CheckIfVegetationExists(Vector2 worldCoord)
+    {
+        if (vegetationExists.TryGetValue(worldCoord, out bool exists))
+        {
+            return exists;
+        }
+        return true;
+    }
+    public static void SetVegetationExists(Vector2 worldCoord, bool exists)
+    {
+        vegetationExists[worldCoord] = exists;
     }
 
     //Generates liquid meshes (water, lava, toxin) on the chunk based on biome and noise
@@ -1121,6 +1139,7 @@ public class WorldGeneration2 : MonoBehaviour
 
                     spawnPosition = new Vector3(worldX, height, worldZ);
                     Instantiate(spawnLight, spawnPosition, Quaternion.identity);
+                    spawnPoint = spawnPosition;
                     return spawnPosition;
 
                 }
