@@ -22,3 +22,6 @@ Its been even longer since ive written in this. School got busy for a little bit
 
 June 12, 2026
 The last couple of weeks, I have added new wands like the ice and ground wands, along with giving all of the wands spells to cast. I also added a respawn mechanic, and tweaked some small bugs. Tiktok has been going great, I have gotten over 700k+ views on my most recent post. I set up the itch.io page: https://hot-comet.itch.io/cast-out and hopefully i can release a working demo by the end of this week.
+
+June 13, 2026
+Rn it is 1:10 AM... I have been working on my save system to allow the game to be loaded, saved between playing sessions, and accessed through a home page. I made the system to make it easy to add multiple players eventually, perhaps making a multiplayer version. I also created a simplified version of the world generation script for the background of my home page screen, inspired by minecrafts background while selecting. I also quikcly created the camera rotation for the home screen as well. I now need to go to bed.
