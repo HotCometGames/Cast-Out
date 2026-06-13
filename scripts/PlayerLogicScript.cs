@@ -6,6 +6,19 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using TMPro;
 using Unity.VisualScripting;
+using JetBrains.Annotations;
+
+[System.Serializable]
+public class PlayerSaveData
+{
+    public string playerName;
+    public ItemData[] inventory;
+    public EntitySaveData entityStats;
+    public int mana;
+    public int maxMana;
+    public Vector3 playerPosition;
+    public Quaternion playerRotation;
+}
 
 [System.Serializable]
 public class ItemData
@@ -80,15 +93,14 @@ public class PlayerLogicScript : MonoBehaviour
     string currentLookAtTag;
     string currentMenu = "";
     GameObject currentLookAtObject;
+    public string playerName = "Player";
 
     // Start is called before the first frame update
     void Start()
     {
         UpdateHotbar();
-        manaBar.maxValue = maxMana;
-        manaBar.value = mana;
-        healthBar.maxValue = entityStats.maxHealth;
-        healthBar.value = entityStats.currentHealth;
+        LoadPlayer(playerName);
+        WorldGeneration2.AddPlayer(this.transform, this);
     }
 
     // Update is called once per frame
@@ -990,6 +1002,8 @@ public class PlayerLogicScript : MonoBehaviour
         // Handle player respawn
         Debug.Log("Player has respawned.");
         entityStats.currentHealth = entityStats.maxHealth;
+        mana = maxMana;
+        manaBar.value = mana;
         healthBar.value = entityStats.currentHealth;
         player.position = WorldGeneration2.spawnPoint; // Respawn at origin, change as needed
         deathUI.SetActive(false);
@@ -1016,5 +1030,43 @@ public class PlayerLogicScript : MonoBehaviour
 
         yield return new WaitForSeconds(flashDuration);
 
+    }
+    void LoadPlayer(string name)
+    {
+        PlayerSaveData saveData = WorldGeneration2.GetPlayerSaveDataByName(name);
+        Vector3 playerPosition = WorldGeneration2.GetPlayerPositionByName(name);
+        Quaternion playerRotation = WorldGeneration2.GetPlayerRotationByName(name);
+        if (saveData != null && playerPosition != Vector3.zero)
+        {
+            entityStats.maxHealth = saveData.entityStats.maxHealth;
+            entityStats.currentHealth = saveData.entityStats.currentHealth;
+            entityStats.maxDamage = saveData.entityStats.maxDamage;
+            entityStats.currentDamage = saveData.entityStats.currentDamage;
+            entityStats.maxSpeed = saveData.entityStats.maxSpeed;
+            entityStats.currentSpeed = saveData.entityStats.currentSpeed;
+            entityStats.healthMultiplier = saveData.entityStats.healthMultiplier;
+            entityStats.damageMultiplier = saveData.entityStats.damageMultiplier;
+            entityStats.speedMultiplier = saveData.entityStats.speedMultiplier;
+            entityStats.statusEffects = saveData.entityStats.statusEffects;
+
+            healthBar.maxValue = entityStats.maxHealth;
+            healthBar.value = entityStats.currentHealth;
+            mana = saveData.mana;
+            maxMana = saveData.maxMana;
+            manaBar.maxValue = maxMana;
+            manaBar.value = mana;
+            inventory = saveData.inventory;
+            transform.position = playerPosition;
+            transform.rotation = playerRotation;
+            UpdateHotbar();
+        } else
+        {
+            manaBar.maxValue = maxMana;
+            manaBar.value = mana;
+            healthBar.maxValue = entityStats.maxHealth;
+            healthBar.value = entityStats.currentHealth;
+            transform.position = WorldGeneration2.spawnPoint + new Vector3(1, 1, 0);
+            UpdateHotbar();
+        }
     }
 }
