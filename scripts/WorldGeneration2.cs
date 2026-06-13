@@ -1,9 +1,21 @@
 using System;
+using System.IO;
 using System.Collections.Generic;
 //using System.Numerics;
 using System.Security;
+using Unity.VisualScripting;
 using UnityEngine;
+using System.Net;
 
+[System.Serializable]
+public class WorldSaveData
+{
+    public string worldName;
+    public int seed;
+    public List<VegetationEntry> vegetation;
+    public List<ChunkObjectEntry> chunkObjects;
+    public List<PlayerSaveData> playerData; // Add player data to world save
+}
 public enum BiomeType
 {
     WaterRocks,
@@ -16,6 +28,18 @@ public enum BiomeType
     Desert,
     ToxicSwamp
 
+}
+[System.Serializable]
+public class VegetationEntry
+{
+    public Vector2 position;
+    public bool exists;
+}
+[System.Serializable]
+public class ChunkObjectEntry
+{
+    public Vector2Int chunkPosition;
+    public List<SavedObjectData> objects;
 }
 [System.Serializable]
 public class StructureData
@@ -121,17 +145,20 @@ public class WorldGeneration2 : MonoBehaviour
     static List<BiomeData> coldBiomes;
 
     [Header("References")]
-    [SerializeField] Transform player;
+    static List<Transform> players = new List<Transform>();
+    static List<PlayerLogicScript> playerScripts = new List<PlayerLogicScript>();
     [SerializeField] GameObject spawnLight;
     [SerializeField] GameObject swampParticles;
     [SerializeField] GameObject slimeBoss;
 
     [Header("Seed Settings")]
-    public int seed = 0;     // <<<<<
+    [SerializeField] int setSeed = 1;
+    static int seed = 1;     // <<<<<
+    static string worldName = "New World"; // <<<<<
 
     static private Dictionary<Vector2Int, GameObject> loadedChunks = new Dictionary<Vector2Int, GameObject>();
-    static private Dictionary<Vector2Int, List<SavedObjectData>> chunkSavedObjects = new Dictionary<Vector2Int, List<SavedObjectData>>(); // <<<<
-    static private Dictionary<Vector2, bool> vegetationExists = new Dictionary<Vector2, bool>(); // <<<<<
+    static private List<ChunkObjectEntry> chunkSavedObjects = new List<ChunkObjectEntry>(); // <<<<
+    static private List<VegetationEntry> vegetationExists = new List<VegetationEntry>(); // <<<<<
 
     static float baseOffsetX, baseOffsetZ;
     static float mediumOffsetX, mediumOffsetZ;
@@ -145,9 +172,11 @@ public class WorldGeneration2 : MonoBehaviour
     private bool setOffsets = false;
 
     public static Vector3 spawnPoint;
+    static WorldSaveData saveData;
 
     void Awake()
     {
+        seed = setSeed;
         chunkSize = setChunkSize;
         vertexSpacing = setVertexSpacing;
         blendEdge = setBlendEdge;
@@ -173,7 +202,13 @@ public class WorldGeneration2 : MonoBehaviour
         neutralBiomes = setNeutralBiomes;
         coldBiomes = setColdBiomes;
 
+        worldName = PlayerPrefs.GetString("WorldName");
 
+        string path = Path.Combine(
+            Application.persistentDataPath,
+            worldName+"_save.json"
+        );
+        LoadData(path);
 
         System.Random rand = new System.Random(seed);
         baseOffsetX         = NextNoiseOffset(rand);
@@ -197,30 +232,38 @@ public class WorldGeneration2 : MonoBehaviour
         
         InitializeTextures();
 
-        Vector3 spawnPos = SetSpawn();
-        player.position = spawnPos + new Vector3(1, 1, 0);
+        SetSpawn();
         setOffsets = true;
+    }
+    private void OnApplicationQuit()
+    {
+        SaveAllChunkData();
+        SaveData();
     }
 
     void Update()
     {
-        if (player == null) return;
+        if (players == null) return;
         if (!setOffsets) return;
 
-        Vector2Int playerChunk = WorldToChunk(player.position);
-        for (int x = -renderDistance; x <= renderDistance; x++)
+        foreach (var player in players)
         {
-            for (int z = -renderDistance; z <= renderDistance; z++)
+            Vector2Int playerChunk = WorldToChunk(player.position);
+            for (int x = -renderDistance; x <= renderDistance; x++)
             {
-                Vector2Int chunkCoord = new Vector2Int(playerChunk.x + x, playerChunk.y + z);
-                if (!loadedChunks.ContainsKey(chunkCoord))
+                for (int z = -renderDistance; z <= renderDistance; z++)
                 {
-                    GenerateChunk(chunkCoord);
+                    Vector2Int chunkCoord = new Vector2Int(playerChunk.x + x, playerChunk.y + z);
+                    if (!loadedChunks.ContainsKey(chunkCoord))
+                    {
+                        GenerateChunk(chunkCoord);
+                    }
                 }
             }
+            // Unload chunks later
+            CheckWhichChunksToUnload(playerChunk, renderDespawnDistance);
         }
-        // Unload chunks later
-        CheckWhichChunksToUnload(playerChunk, renderDespawnDistance);
+        
     }
     
     // Initializes the biome textures in the blend material
@@ -580,15 +623,26 @@ public class WorldGeneration2 : MonoBehaviour
 
     bool CheckIfVegetationExists(Vector2 worldCoord)
     {
-        if (vegetationExists.TryGetValue(worldCoord, out bool exists))
+        for(int i = 0; i < vegetationExists.Count; i++)
         {
-            return exists;
+            if(vegetationExists[i].position == worldCoord)
+            {
+                return vegetationExists[i].exists;
+            }
         }
         return true;
     }
     public static void SetVegetationExists(Vector2 worldCoord, bool exists)
     {
-        vegetationExists[worldCoord] = exists;
+        for (int i = 0; i < vegetationExists.Count; i++)
+        {
+            if (vegetationExists[i].position == worldCoord)
+            {
+                vegetationExists[i] = new VegetationEntry { position = worldCoord, exists = exists };
+                return;
+            }
+        }
+        vegetationExists.Add(new VegetationEntry { position = worldCoord, exists = exists });
     }
 
     //Generates liquid meshes (water, lava, toxin) on the chunk based on biome and noise
@@ -789,14 +843,18 @@ public class WorldGeneration2 : MonoBehaviour
 
     void LoadSavedObjects(Vector2Int chunkCoord, GameObject chunkObj)
     {
-        if (chunkSavedObjects.TryGetValue(chunkCoord, out List<SavedObjectData> savedObjects))
+        for(int i = 0; i < chunkSavedObjects.Count; i++)
         {
-            foreach (var data in savedObjects)
+            if(chunkSavedObjects[i].chunkPosition == chunkCoord)
             {
-                GameObject obj = Instantiate(data.prefab, data.position, data.rotation, chunkObj.transform);
-                obj.GetComponent<ChunkSavableObject>().OnChunkLoaded();
+                foreach (var data in chunkSavedObjects[i].objects)
+                {
+                    GameObject obj = Instantiate(data.prefab, data.position, data.rotation, chunkObj.transform);
+                    obj.GetComponent<ChunkSavableObject>().OnChunkLoaded();
+                }
             }
         }
+        
     }
 
     void UnloadChunk(Vector2Int chunkCoord)
@@ -820,7 +878,17 @@ public class WorldGeneration2 : MonoBehaviour
                     savedObjects.Add(data);
                 }
             }
-            chunkSavedObjects[chunkCoord] = savedObjects;
+            for(int i = 0; i < chunkSavedObjects.Count; i++)
+            {
+                if(chunkSavedObjects[i].chunkPosition == chunkCoord)
+                {
+                    chunkSavedObjects[i] = new ChunkObjectEntry { chunkPosition = chunkCoord, objects = savedObjects };
+                    Destroy(chunkObj);
+                    loadedChunks.Remove(chunkCoord);
+                    return;
+                }
+            }
+            chunkSavedObjects.Add(new ChunkObjectEntry { chunkPosition = chunkCoord, objects = savedObjects });
             Destroy(chunkObj);
             loadedChunks.Remove(chunkCoord);
         }
@@ -848,7 +916,14 @@ public class WorldGeneration2 : MonoBehaviour
 
     bool ChunkHasSaveData(Vector2Int chunkCoord)
     {
-        return chunkSavedObjects.ContainsKey(chunkCoord);
+        for(int i = 0; i < chunkSavedObjects.Count; i++)
+        {
+            if(chunkSavedObjects[i].chunkPosition == chunkCoord)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     void SaveChunkData(Vector2Int chunkCoord)
@@ -879,9 +954,24 @@ public class WorldGeneration2 : MonoBehaviour
                 savedObjects.Add(data);
             }
         }
-        chunkSavedObjects[chunkCoord] = savedObjects;
+        for(int i = 0; i < chunkSavedObjects.Count; i++)
+        {
+            if(chunkSavedObjects[i].chunkPosition == chunkCoord)
+            {
+                chunkSavedObjects[i] = new ChunkObjectEntry { chunkPosition = chunkCoord, objects = savedObjects };
+                return;
+            }
+        }
+        chunkSavedObjects.Add(new ChunkObjectEntry { chunkPosition = chunkCoord, objects = savedObjects });
     }
 
+    void SaveAllChunkData()
+    {
+        foreach (var chunkCoord in loadedChunks.Keys)
+        {
+            SaveChunkData(chunkCoord);
+        }
+    }
     public static GameObject GetChunkObj(Vector2Int chunkCoord)
     {
         if (loadedChunks.TryGetValue(chunkCoord, out GameObject chunkObj))
@@ -1101,7 +1191,7 @@ public class WorldGeneration2 : MonoBehaviour
     }
 
     // Sets the spawn position in the world
-    Vector3 SetSpawn()
+    void SetSpawn()
     {
         int vertsPerLine = chunkSize + 1;
         Vector2 chunkCoord = new Vector2(0, 0);
@@ -1140,11 +1230,141 @@ public class WorldGeneration2 : MonoBehaviour
                     spawnPosition = new Vector3(worldX, height, worldZ);
                     Instantiate(spawnLight, spawnPosition, Quaternion.identity);
                     spawnPoint = spawnPosition;
-                    return spawnPosition;
-
+                    return;
                 }
             }
             chunkX++;
         }
+    }
+
+    public static void AddPlayer(Transform playerTransform, PlayerLogicScript playerScript)
+    {
+        players.Add(playerTransform);
+        playerScripts.Add(playerScript);
+    }
+    public static void RemovePlayer(Transform playerTransform, PlayerLogicScript playerScript)
+    {
+        players.Remove(playerTransform);
+        playerScripts.Remove(playerScript);
+    }
+    
+    public static void SaveData()
+    {
+        List<PlayerSaveData> preSavedPlayerData = saveData.playerData;
+        List<PlayerSaveData> playerData = new List<PlayerSaveData>();
+        foreach(var player in playerScripts)
+        {
+            PlayerSaveData data1 = new PlayerSaveData
+            {
+                playerName = player.playerName,
+                inventory = player.inventory,
+                entityStats = player.entityStats.GetEntitySaveData(),
+                mana = player.mana,
+                maxMana = player.maxMana,
+                playerPosition = player.transform.position,
+                playerRotation = player.transform.rotation
+            };
+            playerData.Add(data1);
+        }
+        List<PlayerSaveData> combinedPlayerData = new List<PlayerSaveData>(preSavedPlayerData);
+        foreach(var data2 in playerData)        {
+            bool found = false;
+            for(int i = 0; i < combinedPlayerData.Count; i++)
+            {
+                if(combinedPlayerData[i].playerName == data2.playerName)
+                {
+                    combinedPlayerData[i] = data2;
+                    found = true;
+                    break;
+                }
+            }
+            if(!found)
+            {
+                combinedPlayerData.Add(data2);
+            }
+        }
+
+        WorldSaveData data = new WorldSaveData
+        {
+            worldName = WorldGeneration2.worldName,
+            seed = WorldGeneration2.seed,
+            vegetation = vegetationExists,
+            chunkObjects = chunkSavedObjects,
+            playerData = combinedPlayerData
+        };
+
+        string json = JsonUtility.ToJson(data, true);
+
+        string path = Path.Combine(
+            Application.persistentDataPath,
+            worldName+"_save.json"
+        );
+        Debug.Log(Application.persistentDataPath);
+        Debug.Log(path);
+
+        File.WriteAllText(path, json);
+    }
+
+    public static void LoadData(string path)
+    {
+        if (!File.Exists(path))
+        {
+            CreateNewWorld();
+            return;
+        }
+        string json = File.ReadAllText(path);
+
+        saveData = JsonUtility.FromJson<WorldSaveData>(json);
+        vegetationExists = saveData.vegetation;
+        chunkSavedObjects = saveData.chunkObjects;
+        seed = saveData.seed;
+        
+    }
+    public static void CreateNewWorld()
+    {
+        saveData = new WorldSaveData
+        {
+            worldName = worldName,
+            seed = seed,
+            vegetation = new List<VegetationEntry>(),
+            chunkObjects = new List<ChunkObjectEntry>(),
+            playerData = new List<PlayerSaveData>()
+        };
+    }
+
+    public static PlayerSaveData GetPlayerSaveDataByName(string playerName)
+    {
+        foreach(var data in saveData.playerData)
+        {
+            if(data.playerName == playerName)
+            {
+                return data;
+            }
+        }
+        return null;
+    }
+
+    public static Vector3 GetPlayerPositionByName(string playerName)
+    {
+        foreach(var data in saveData.playerData)
+        {
+            if(data.playerName == playerName)
+            {
+                return data.playerPosition;
+            }
+        }
+        return Vector3.zero;
+    }
+    
+    public static Quaternion GetPlayerRotationByName(string playerName)
+    {
+        foreach(var data in saveData.playerData)
+        {
+            if(data.playerName == playerName)
+            {
+                return data.playerRotation;
+            }
+        }
+        return Quaternion.identity;
     }
 }
