@@ -25,3 +25,6 @@ The last couple of weeks, I have added new wands like the ice and ground wands, 
 
 June 13, 2026
 Rn it is 1:10 AM... I have been working on my save system to allow the game to be loaded, saved between playing sessions, and accessed through a home page. I made the system to make it easy to add multiple players eventually, perhaps making a multiplayer version. I also created a simplified version of the world generation script for the background of my home page screen, inspired by minecrafts background while selecting. I also quikcly created the camera rotation for the home screen as well. I now need to go to bed.
+
+June 14, 2026
+Once again it is 1 AM. I finished the home screen, and made it so you can make multiple worlds, load them into the game scene and play them, but then i came across this bug that made it if you load a world, leave then join it again, no chunks would load. I spent 4 hours tonight debugging it untile i found out its because i have to clear out old data every time i run it... i will go to bed now. i cant keep doing this.
