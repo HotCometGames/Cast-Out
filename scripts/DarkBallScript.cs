@@ -12,6 +12,7 @@ public class DarkBallScript : MonoBehaviour
     {
         Rigidbody rb = GetComponent<Rigidbody>();
         rb.velocity = transform.forward * speed;
+        SoundManager.PlaySound("Swoosh", transform.position, 1f);
     }
 
     // Update is called once per frame
