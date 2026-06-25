@@ -5,8 +5,9 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using TMPro;
-using Unity.VisualScripting;
-using JetBrains.Annotations;
+using UnityEngine.SceneManagement;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 [System.Serializable]
 public class PlayerSaveData
@@ -25,7 +26,7 @@ public class ItemData
 {
     public string name;
     public Sprite sprite;
-    public ChunkObjectDefinition prefabDefinition;
+    public GameObject prefab;
     public int manaCost;
     public int currentAmount;
     public int maxAmount;
@@ -65,6 +66,7 @@ public class PlayerLogicScript : MonoBehaviour
     public GameObject tradeMenuUI;
     public GameObject craftingMenuUI;
     public GameObject anvilUI;
+    public GameObject GameMenuUI;
     public TradeMenuScript tradeMenuScript;
     public Slider manaBar;
     public Slider healthBar;
@@ -86,6 +88,11 @@ public class PlayerLogicScript : MonoBehaviour
     public int maxCreaturesToSpawnAtOnce = 3;
     public int maxCreatures = 25;
 
+    [Header("Post Processing")]
+    public Volume globalVolume;
+    private Vignette vignette;
+    private Coroutine flashRoutine;
+
     //Crafting
     public bool inCraftingRune = false;
 
@@ -98,14 +105,27 @@ public class PlayerLogicScript : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        UpdateHotbar();
+        globalVolume.profile.TryGet(out vignette);
         LoadPlayer(playerName);
         WorldGeneration2.AddPlayer(this.transform, this);
+        UpdateHotbar();
+        if(entityStats.currentHealth <= 0)
+        {
+            Die();
+        }
     }
 
     // Update is called once per frame
     void Update()
     {
+        if(transform.position.y < WorldGeneration2.GetHeight(transform.position.x, transform.position.z) - 20f)
+        {
+            Die();
+        }
+        if(transform.position.y < WorldGeneration2.GetHeight(transform.position.x, transform.position.z) - 1f)
+        {
+            transform.position = new Vector3(transform.position.x, WorldGeneration2.GetHeight(transform.position.x, transform.position.z) + 1f, transform.position.z);
+        }
         UpdateHealth();
         WhatAmILookingAt();
         UpdateCreatureSpawning();
@@ -133,6 +153,55 @@ public class PlayerLogicScript : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.Q))
             {
                 DropItem(selectedItem);
+            }
+        }
+        if(Input.GetKeyDown(KeyCode.Escape))
+        {
+            if (currentMenu == "GameMenu" || currentMenu == "")
+            {
+                GameMenuUI.SetActive(!GameMenuUI.activeSelf);
+                Cursor.lockState = GameMenuUI.activeSelf ? CursorLockMode.None : CursorLockMode.Locked;
+                playerMovement.inputEnabled = !GameMenuUI.activeSelf;
+                inMenu = GameMenuUI.activeSelf;
+                currentMenu = GameMenuUI.activeSelf ? "GameMenu" : "";
+                UpdateHotbar();
+            }
+            else if (currentMenu == "Inventory")
+            {
+                inventoryUI.SetActive(false);
+                Cursor.lockState = CursorLockMode.Locked;
+                playerMovement.inputEnabled = true;
+                inMenu = false;
+                slotTradeSelected = -1;
+                currentMenu = "";
+                UpdateHotbar();
+            }
+            else if (currentMenu == "Trade")
+            {
+                tradeMenuUI.SetActive(false);
+                Cursor.lockState = CursorLockMode.Locked;
+                playerMovement.inputEnabled = true;
+                inMenu = false;
+                slotTradeSelected = -1;
+                currentMenu = "";
+                UpdateHotbar();
+            }
+            else if (currentMenu == "Crafting")
+            {
+                craftingMenuUI.SetActive(false);
+                Cursor.lockState = CursorLockMode.Locked;
+                playerMovement.inputEnabled = true;
+                inMenu = false;
+                currentMenu = "";
+                UpdateHotbar();
+            } else if (currentMenu == "Anvil")
+            {
+                anvilUI.SetActive(false);
+                Cursor.lockState = CursorLockMode.Locked;
+                playerMovement.inputEnabled = true;
+                inMenu = false;
+                currentMenu = "";
+                UpdateHotbar();
             }
         }
         if (Input.GetKeyDown(KeyCode.E))
@@ -168,6 +237,14 @@ public class PlayerLogicScript : MonoBehaviour
             } else if (currentMenu == "Anvil")
             {
                 anvilUI.SetActive(false);
+                Cursor.lockState = CursorLockMode.Locked;
+                playerMovement.inputEnabled = true;
+                inMenu = false;
+                currentMenu = "";
+                UpdateHotbar();
+            } else if (currentMenu == "GameMenu")
+            {
+                GameMenuUI.SetActive(false);
                 Cursor.lockState = CursorLockMode.Locked;
                 playerMovement.inputEnabled = true;
                 inMenu = false;
@@ -310,8 +387,10 @@ public class PlayerLogicScript : MonoBehaviour
             switch(inventory[item].name)
             {
                 case "Mana Berry":
+                    if(mana == maxMana) {break;}
                     Debug.Log("Consuming Mana Berry...");
                     mana += 20;
+                    SoundManager.PlaySound("Eat", player.position, 1f);
                     if (mana > maxMana) { mana = maxMana; }
                     manaBar.value = mana;
                     if(inventory[item].currentAmount > 1)
@@ -323,8 +402,10 @@ public class PlayerLogicScript : MonoBehaviour
                     UpdateHotbar();
                     break;
                 case "Bread":
+                    if(entityStats.currentHealth == entityStats.maxHealth) {break;}
                     Debug.Log("Consuming Bread...");
                     entityStats.currentHealth += 20;
+                    SoundManager.PlaySound("Eat", player.position, 1f);
                     if (entityStats.currentHealth > entityStats.maxHealth) { entityStats.currentHealth = entityStats.maxHealth; }
                     healthBar.value = entityStats.currentHealth;
                     if(inventory[item].currentAmount > 1)
@@ -399,6 +480,7 @@ public class PlayerLogicScript : MonoBehaviour
             case "Fire Wand":
                 // Cast a fire spell
                 Debug.Log("Casting fire spell...");
+                SoundManager.PlaySound("FireSpell", playerCamera.transform.position, 1f);
                 GameObject fireball = Instantiate(fireballPrefab, playerCamera.transform.position + playerCamera.transform.forward, cameraTransform.rotation);
                 fireball.GetComponent<FireBallScript>().speed = 50f;
                 fireball.GetComponent<AttackScript>().owner = this.gameObject;
@@ -408,6 +490,7 @@ public class PlayerLogicScript : MonoBehaviour
                 // Cast a nature spell
                 Debug.Log("Casting nature spell...");
                 if (hitPoint == new Vector3()) { return; }
+                SoundManager.PlaySound("NatureSpell", hitPoint, 1f);
                 GameObject plant = Instantiate(plantPrefab, hitPoint, Quaternion.identity);
                 plant.GetComponent<AttackScript>().owner = this.gameObject;
                 break;
@@ -415,12 +498,14 @@ public class PlayerLogicScript : MonoBehaviour
                 // Cast a ground spell
                 Debug.Log("Casting ground spell...");
                 if (hitPoint == new Vector3()) { return; }
+                SoundManager.PlaySound("GroundSpell", hitPoint, 1f);
                 GameObject groundSpell = Instantiate(groundSpellPrefab, hitPoint, Quaternion.identity);
                 groundSpell.GetComponent<AttackScript>().owner = this.gameObject;
                 break;
             case "Dark Wand":
                 // Cast a dark spell
                 Debug.Log("Casting dark spell...");
+                SoundManager.PlaySound("DarkSpell", playerCamera.transform.position, 1f);
                 GameObject darkball = Instantiate(darkSpellPrefab, playerCamera.transform.position + playerCamera.transform.forward, cameraTransform.rotation);
                 darkball.GetComponent<DarkBallScript>().speed = 50f;
                 darkball.GetComponent<AttackScript>().owner = this.gameObject;
@@ -428,6 +513,7 @@ public class PlayerLogicScript : MonoBehaviour
                 case "Ice Wand":
                 // Cast a ice spell
                 Debug.Log("Casting ice spell...");
+                SoundManager.PlaySound("IceSpell", playerCamera.transform.position, 1f);
                 GameObject iceShell = Instantiate(iceSpellPrefab, playerCamera.transform.position - new Vector3(0.25f, 2f, .5f), Quaternion.identity);
                 iceShell.GetComponent<AttackScript>().owner = this.gameObject;
                 break;
@@ -476,6 +562,7 @@ public class PlayerLogicScript : MonoBehaviour
                 {
                     GameObject punch1 = Instantiate(punchPrefab, player.position + cameraTransform.forward * 2f, cameraTransform.rotation);
                     punch1.GetComponent<AttackScript>().owner = this.gameObject;
+                    SoundManager.PlaySound("Punch", player.position, 1f);
                     Debug.Log("Punching...");
                 }
                 break;
@@ -492,6 +579,7 @@ public class PlayerLogicScript : MonoBehaviour
                 {
                     GameObject punch1 = Instantiate(punchPrefab, player.position + cameraTransform.forward * 2f, cameraTransform.rotation);
                     punch1.GetComponent<AttackScript>().owner = this.gameObject;
+                    SoundManager.PlaySound("Punch", player.position, 1f);
                     Debug.Log("Punching...");
                 }
                 break;
@@ -499,10 +587,12 @@ public class PlayerLogicScript : MonoBehaviour
                 GameObject hammer = Instantiate(punchPrefab, player.position + cameraTransform.forward * 2f, cameraTransform.rotation);
                 hammer.GetComponent<AttackScript>().owner = this.gameObject;
                 hammer.GetComponent<AttackScript>().damage = 20f;
+                SoundManager.PlaySound("Punch", player.position, 1f);
                 break;
             default:
                 GameObject punch = Instantiate(punchPrefab, player.position + cameraTransform.forward * 2f, cameraTransform.rotation);
                 punch.GetComponent<AttackScript>().owner = this.gameObject;
+                SoundManager.PlaySound("Punch", player.position, 1f);
                 Debug.Log("Punching...");
                 break;
         }
@@ -538,9 +628,29 @@ public class PlayerLogicScript : MonoBehaviour
 
     public void UpdateHotbar()
     {
+        if (slots == null || inventory == null)
+            return;
+
         for (int i = 0; i < slots.Length; i++)
         {
+            if (slots[i] == null)
+                continue;
+
             Image slotImage = slots[i].GetComponent<UnityEngine.UI.Image>();
+            if (slotImage == null)
+                continue;
+
+            // If inventory is shorter than slots, treat as empty slot
+            if (i >= inventory.Length)
+            {
+                slotImage.sprite = normalSlotSprite;
+                Color c = slotImage.color;
+                c.a = 0f;
+                slotImage.color = c;
+                TextMeshProUGUI amountText = slots[i].transform.parent.GetComponentInChildren<TextMeshProUGUI>();
+                if (amountText != null) amountText.text = "";
+                continue;
+            }
 
             if (inventory[i] == null || string.IsNullOrEmpty(inventory[i].name))
             {
@@ -620,8 +730,8 @@ public class PlayerLogicScript : MonoBehaviour
                     slotImage.color = c;
                     TextMeshProUGUI amountText = inventorySlots[i].transform.parent.GetComponentInChildren<TextMeshProUGUI>();
                     amountText.text = "";
-                    continue;
                 }
+                continue;
                 
             }
 
@@ -709,7 +819,7 @@ public class PlayerLogicScript : MonoBehaviour
                     {
                         name = itemToAdd.name,
                         sprite = itemToAdd.sprite,
-                        prefabDefinition = itemToAdd.prefabDefinition,
+                        prefab = itemToAdd.prefab,
                         manaCost = itemToAdd.manaCost,
                         currentAmount = amountToAdd,
                         maxAmount = itemToAdd.maxAmount,
@@ -725,7 +835,7 @@ public class PlayerLogicScript : MonoBehaviour
                     {
                         name = itemToAdd.name,
                         sprite = itemToAdd.sprite,
-                        prefabDefinition = itemToAdd.prefabDefinition,
+                        prefab = itemToAdd.prefab,
                         manaCost = itemToAdd.manaCost,
                         currentAmount = itemToAdd.maxAmount,
                         maxAmount = itemToAdd.maxAmount,
@@ -743,7 +853,7 @@ public class PlayerLogicScript : MonoBehaviour
             {
                 name = itemToAdd.name,
                 sprite = itemToAdd.sprite,
-                prefabDefinition = itemToAdd.prefabDefinition,
+                prefab = itemToAdd.prefab,
                 manaCost = itemToAdd.manaCost,
                 currentAmount = amountToAdd,
                 maxAmount = itemToAdd.maxAmount,
@@ -751,7 +861,7 @@ public class PlayerLogicScript : MonoBehaviour
             };
             // Drop Items on the ground
             Vector3 dropPosition = player.position + player.forward * 2f;
-            GameObject droppedItem = Instantiate(newItem.prefabDefinition.prefab, dropPosition, Quaternion.identity);
+            GameObject droppedItem = Instantiate(newItem.prefab, dropPosition, Quaternion.identity);
             droppedItem.GetComponent<ItemPickup>().itemData = newItem;
         }
         UpdateHotbar();
@@ -766,9 +876,9 @@ public class PlayerLogicScript : MonoBehaviour
 
         // Instantiate the item's prefab in front of the player
         Vector3 dropPosition = player.position + player.forward * 2f;
-        if (inventory[item].prefabDefinition.prefab != null)
+        if (inventory[item].prefab != null)
         {
-            Instantiate(inventory[item].prefabDefinition.prefab, dropPosition, Quaternion.identity);
+            Instantiate(inventory[item].prefab, dropPosition, Quaternion.identity);
             Debug.Log($"Dropped item: {inventory[item].name}");
             // Remove the item from the inventory
             if(inventory[item].currentAmount > 1)
@@ -972,11 +1082,18 @@ public class PlayerLogicScript : MonoBehaviour
         {
             return;
         }
+        if(entityStats.currentHealth <= 0 && currentMenu == "Death")
+        {
+            return;
+        }
         lastDamageTimer = Time.time;
         entityStats.currentHealth -= damage;
+        SoundManager.PlaySound("Hurt", player.position, 1f);
         if (entityStats.currentHealth < 0) { entityStats.currentHealth = 0; }
         healthBar.value = entityStats.currentHealth;
-        StartCoroutine(FlashOnDamage(Color.red, 0.2f));
+        if (flashRoutine != null)
+            StopCoroutine(flashRoutine);
+        StartCoroutine(FlashOnDamage(Color.red, 0.2f, 0.4f));
         if (entityStats.currentHealth <= 0)
         {
             Die();
@@ -994,6 +1111,7 @@ public class PlayerLogicScript : MonoBehaviour
         inMenu = true;
         slotTradeSelected = -1;
         currentMenu = "Death";
+        SoundManager.PlaySound("Death", player.position, 1f);
         UpdateHotbar();
     }
 
@@ -1014,6 +1132,31 @@ public class PlayerLogicScript : MonoBehaviour
         UpdateHotbar();
     }
 
+    public void OpenGameMenu()
+    {
+        Cursor.lockState = CursorLockMode.None;
+        playerMovement.inputEnabled = false;
+        GameMenuUI.SetActive(true);
+        inMenu = true;
+        currentMenu = "GameMenu";
+    }
+
+    public void CloseGameMenu()
+    {
+        Cursor.lockState = CursorLockMode.Locked;
+        playerMovement.inputEnabled = true;
+        GameMenuUI.SetActive(false);
+        inMenu = false;
+        currentMenu = "";
+    }
+
+    public void ReturnToHomeScreen()
+    {
+        WorldGeneration2.SaveAll();
+        //WorldGeneration2.RemovePlayer(this.transform, this);
+        
+        SceneManager.LoadScene("HomeScreen");
+    }
     void UpdateHealth()
     {
         healthBar.value = entityStats.currentHealth;
@@ -1024,19 +1167,38 @@ public class PlayerLogicScript : MonoBehaviour
         }
     }
 
-    IEnumerator FlashOnDamage(Color flashColor, float flashDuration)
+    IEnumerator FlashOnDamage(Color flashColor, float flashDuration, float flashIntensity)
     {
-        // Ill figure out later
+        float halfDuration = flashDuration / 2f;
+        float timer = 0f;
+        vignette.color.value = flashColor;
 
-        yield return new WaitForSeconds(flashDuration);
+        // Fade in
+        while (timer < halfDuration)
+        {
+            timer += Time.deltaTime;
+            vignette.intensity.value = Mathf.Lerp(0f, flashIntensity, timer / halfDuration);
+            yield return null;
+        }
 
+        // Fade out
+        timer = 0f;
+        while (timer < halfDuration)
+        {
+            timer += Time.deltaTime;
+            vignette.intensity.value = Mathf.Lerp(flashIntensity, 0f, timer / halfDuration);
+            yield return null;
+        }
+
+        vignette.intensity.value = 0f; // Reset
+        flashRoutine = null;
     }
     void LoadPlayer(string name)
     {
         PlayerSaveData saveData = WorldGeneration2.GetPlayerSaveDataByName(name);
-        Vector3 playerPosition = WorldGeneration2.GetPlayerPositionByName(name);
-        Quaternion playerRotation = WorldGeneration2.GetPlayerRotationByName(name);
-        if (saveData != null && playerPosition != Vector3.zero)
+        Vector3 playerPosition = saveData != null ? saveData.playerPosition : Vector3.zero;
+        Quaternion playerRotation = saveData != null ? saveData.playerRotation : Quaternion.identity;
+        if (saveData != null)
         {
             entityStats.maxHealth = saveData.entityStats.maxHealth;
             entityStats.currentHealth = saveData.entityStats.currentHealth;
@@ -1058,7 +1220,7 @@ public class PlayerLogicScript : MonoBehaviour
             inventory = saveData.inventory;
             transform.position = playerPosition;
             transform.rotation = playerRotation;
-            UpdateHotbar();
+            //UpdateHotbar();
         } else
         {
             manaBar.maxValue = maxMana;
@@ -1066,7 +1228,7 @@ public class PlayerLogicScript : MonoBehaviour
             healthBar.maxValue = entityStats.maxHealth;
             healthBar.value = entityStats.currentHealth;
             transform.position = WorldGeneration2.spawnPoint + new Vector3(1, 1, 0);
-            UpdateHotbar();
+            //UpdateHotbar();
         }
     }
 }
