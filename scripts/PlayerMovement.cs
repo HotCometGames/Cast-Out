@@ -12,6 +12,12 @@ public class PlayerMovement : MonoBehaviour
     public float moveToJumpRatio = 0.5f;
     public float gravity = -9.81f;
     public bool inputEnabled = true;
+    public bool debugMode = false;
+
+    [Header("Footstep Sound")]
+    public string footstepSoundName = "Walk";
+    public float footstepInterval = 0.4f;
+    private float footstepTimer = 0f;
 
     //debug DELETE LATER
     public float debugSpeedMultiplier = 20f;
@@ -64,8 +70,22 @@ public class PlayerMovement : MonoBehaviour
             float currentSpeed = new Vector3(rb.velocity.x, 0, rb.velocity.z).magnitude;
             ItemHoldingUIScript.SetSpeed(currentSpeed / (entityStats.currentSpeed * debugAppliedMultiplier));
 
+            if (IsGroundedCheck() && currentSpeed > 0.1f)
+            {
+                footstepTimer -= Time.deltaTime;
+                if (footstepTimer <= 0f)
+                {
+                    footstepTimer = footstepInterval;
+                    SoundManager.PlaySound(footstepSoundName, transform.position, 1f);
+                }
+            }
+            else
+            {
+                footstepTimer = 0f;
+            }
+
             // Jumping
-            if (isGroundedCheck() && Input.GetButton("Jump"))
+            if (IsGroundedCheck() && Input.GetButton("Jump"))
             {
                 rb.velocity = new Vector3(rb.velocity.x, jumpForce, rb.velocity.z); // Reset vertical velocity
                 //rb.AddForce(Vector3.up * moveToJumpRatio * entityStats.maxSpeed, ForceMode.Impulse);
@@ -98,14 +118,21 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    bool isGroundedCheck()
+    bool IsGroundedCheck()
     {
-        return Physics.Raycast(transform.position, Vector3.down, 1.6f);
+        RaycastHit hit;
+
+        if (Physics.Raycast(transform.position, Vector3.down, out hit, 1.6f))
+        {
+            return !hit.collider.isTrigger;
+        }
+
+        return false;
     }
 
     void CHECKFORDEBUG()
     {
-        if(Input.GetKeyDown(KeyCode.T))
+        if(Input.GetKeyDown(KeyCode.T) && debugMode)
         {
             debugAppliedMultiplier = debugAppliedMultiplier == 1f ? debugSpeedMultiplier : 1f;
             Debug.Log("Debug Speed Multiplier: " + debugAppliedMultiplier);
