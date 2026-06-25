@@ -10,6 +10,7 @@ public class FireBallScript : MonoBehaviour
     {
         Rigidbody rb = GetComponent<Rigidbody>();
         rb.velocity = transform.forward * speed;
+        SoundManager.PlaySound("Fire Ball", transform.position, 1f);
     }
 
     void OnTriggerEnter(Collider other)
