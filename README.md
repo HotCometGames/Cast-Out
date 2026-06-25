@@ -28,3 +28,6 @@ Rn it is 1:10 AM... I have been working on my save system to allow the game to b
 
 June 14, 2026
 Once again it is 1 AM. I finished the home screen, and made it so you can make multiple worlds, load them into the game scene and play them, but then i came across this bug that made it if you load a world, leave then join it again, no chunks would load. I spent 4 hours tonight debugging it untile i found out its because i have to clear out old data every time i run it... On the bright side, the Alpha version released on itch.io today: https://hot-comet.itch.io/cast-out. i will go to bed now. i cant keep doing this.
+
+June 25, 2026
+Over the past week, I have done debugging on world loading issues, world save data, flying glitch, enemy stop spawning glitch, and countless other small annoyances that I cant remember them all. More notably, I have new music for my game! I also now have an audio system thatr allows sound effects, along with enemy hit flash, and player damage flash.
