@@ -356,7 +356,8 @@ public class EnemyScript : MonoBehaviour
             if(roll <= chance)
             {
                 //drop the item
-                GameObject itemObject = Instantiate(drops[i].prefabDefinition.prefab, transform.position, Quaternion.identity);
+                GameObject itemObject = Instantiate(drops[i].prefab, transform.position, Quaternion.identity);
+                SoundManager.PlaySound("Item Drop", transform.position, 1f);
             }
         }
     }
@@ -369,5 +370,10 @@ public class EnemyScript : MonoBehaviour
     public void OnChunkLoaded()
     {
         enemyCount += 1;
+    }
+
+    public static void ResetEnemyCount()
+    {
+        enemyCount=0;
     }
 }
