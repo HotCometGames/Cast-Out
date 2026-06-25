@@ -13,6 +13,7 @@ public class LasoScript : MonoBehaviour
     {
         rb = GetComponent<Rigidbody>();
         rb.velocity = transform.forward * speed;
+        SoundManager.PlaySound("Swoosh", transform.position, 1f);
     }
 
     // Update is called once per frame
