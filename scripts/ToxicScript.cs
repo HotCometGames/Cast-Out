@@ -14,6 +14,7 @@ public class ToxicScript : MonoBehaviour
         Rigidbody rb = GetComponent<Rigidbody>();
         rb.velocity = transform.forward * speed;
         owner = GetComponent<AttackScript>().owner;
+        SoundManager.PlaySound("Swoosh", transform.position, 1f);
     }
 
     void OnTriggerEnter(Collider other)
