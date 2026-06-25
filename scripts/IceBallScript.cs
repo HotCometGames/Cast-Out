@@ -13,6 +13,7 @@ public class IceBallScript : MonoBehaviour
         startPosition = transform.position;
         Rigidbody rb = GetComponent<Rigidbody>();
         rb.velocity = transform.forward * speed;
+        SoundManager.PlaySound("Swoosh", transform.position, 1f);
     }
 
     void OnTriggerEnter(Collider other)
